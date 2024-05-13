@@ -1,0 +1,8 @@
+license_plate_ocr:
+  resizing_threshold: 15000
+  pytesseract_config: '--psm 8' # seems the most adequate config
+  # 6 = Assume a single uniform block of text.
+  # 7 = Treat the image as a single text line.
+  # 8 = Treat the image as a single word.
+  # 13 = Raw line. Treat the image as a single text line,
+  #     bypassing hacks that are Tesseract-specific.
