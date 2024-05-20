@@ -1,3 +1,7 @@
+"""Frontend Streamlit APP for pl8catch"""
+
+import base64
+import json
 import streamlit as st
 import requests
 from PIL import Image
@@ -31,20 +35,24 @@ def fetch_video_frames(backend_endpoint: str) -> None:
 
     response = requests.get(backend_endpoint, stream=True, timeout=10)
     if response.status_code == 200:
-        bytes_data = bytes()
-        # Create a placeholder for the image
         image_placeholder = st.empty()
-        for chunk in response.iter_content(chunk_size=1024):
-            bytes_data += chunk
-            a = bytes_data.find(b"\xff\xd8")
-            b = bytes_data.find(b"\xff\xd9")
-            if a != -1 and b != -1:
-                jpg = bytes_data[a : b + 2]
-                bytes_data = bytes_data[b + 2 :]
-                frame = Image.open(io.BytesIO(jpg))
+        metadata_placeholder = st.empty()
+
+        for chunk in response.iter_lines():
+            if chunk:
+                # Decode the JSON payload
+                data = json.loads(chunk.decode("utf-8").replace("data: ", ""))
+                frame_base64 = data["frame"]
+                detections = data["detections"]
+
+                # Decode the base64-encoded frame
+                frame_bytes = base64.b64decode(frame_base64)
+                frame = Image.open(io.BytesIO(frame_bytes))
                 frame_array = np.array(frame)
-                # Update the image in the placeholder
+
+                # Update the image and metadata in Streamlit
                 image_placeholder.image(frame_array, caption="Video Stream", use_column_width=True)
+                metadata_placeholder.json(detections)
 
 
 # Call the function with the FastAPI video endpoint URL

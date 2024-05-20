@@ -1,19 +1,21 @@
+"""FastAPI backend of pl8catch"""
+
+import base64
+import json
 from typing import AsyncGenerator
 from fastapi.responses import StreamingResponse
 import uvicorn
-import yaml
 import cv2
 from ultralytics import YOLO
 from fastapi import FastAPI
 
 
+from pl8catch.data_model import CONFIG
 from pl8catch.utils import detect_plate, plot_objects_in_image
 
-yolo_model = YOLO("models/yolov9c.pt")
-yolo_plate_model = YOLO("models/license_plate_yolov9c.pt")
 
-with open("config.yaml") as stream:
-    config = yaml.safe_load(stream)
+yolo_object_model = YOLO(CONFIG.models.object_detection)
+yolo_plate_model = YOLO(CONFIG.models.license_plate)
 
 app = FastAPI(
     title="Pl8Catch",
@@ -52,15 +54,23 @@ async def get_video_frame(video: cv2.VideoCapture) -> AsyncGenerator:
             break
 
         # Detect objects
-        detected_objects = detect_plate(frame, yolo_model, yolo_plate_model, config)
+        detected_objects = detect_plate(frame, yolo_object_model, yolo_plate_model, CONFIG)
         annotated_image = plot_objects_in_image(frame, detected_objects)
 
         # Encode frame as JPEG
         _, jpeg = cv2.imencode(".jpg", annotated_image)
 
-        # Convert to bytes and yield
-        frame_bytes = jpeg.tobytes()
-        yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
+        # Convert frame to base64 string
+        frame_base64 = base64.b64encode(jpeg.tobytes()).decode("utf-8")
+
+        # Convert detected objects to dictionaries
+        detected_objects_dicts = [obj.model_dump() for obj in detected_objects]
+
+        # Create the payload
+        payload = {"frame": frame_base64, "detections": detected_objects_dicts}
+
+        # Yield the payload as JSON
+        yield (b"data: " + json.dumps(payload).encode() + b"\n\n")
 
 
 @app.get("/video-detection")
@@ -80,7 +90,7 @@ async def video_detection_endpoint() -> StreamingResponse:
     in each frame, annotates the frames, and streams them to the client. The stream is intended for real-time
     viewing in a web browser.
     """
-    return StreamingResponse(get_video_frame(video), media_type="multipart/x-mixed-replace; boundary=frame")
+    return StreamingResponse(get_video_frame(video), media_type="text/event-stream")
 
 
 if __name__ == "__main__":

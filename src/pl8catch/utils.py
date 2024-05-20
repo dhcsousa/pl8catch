@@ -1,41 +1,15 @@
-from typing import Any
+"""Basic utils for the backend of pl8catch"""
+
 import cv2
 import pytesseract
 import numpy as np
 from ultralytics import YOLO
 
-
-class DetectedObject:
-    def __init__(
-        self,
-        object_id: int | None,
-        license_plate_text: str,
-        license_plate_confidence: float,
-        predicted_object_type: str,
-        object_biding_box: tuple[int, int, int, int],
-        plate_biding_box: tuple[int, int, int, int],
-    ):
-        self.object_id: int | None = object_id
-        self.license_plate_text: str = license_plate_text
-        self.license_plate_confidence: float = license_plate_confidence
-        self.predicted_object_type: str = predicted_object_type
-        self.object_biding_box: tuple[int, int, int, int] = object_biding_box
-        self.plate_biding_box: tuple[int, int, int, int] = plate_biding_box
-
-    def to_dict(self) -> dict[str, None | int | str | float | tuple[int, int, int, int]]:
-        """Convert object do dictionary"""
-        return {
-            "object_id": self.object_id,
-            "license_plate_text": self.license_plate_text,
-            "license_plate_confidence": self.license_plate_confidence,
-            "predicted_object_type": self.predicted_object_type,
-            "object_biding_box": self.object_biding_box,
-            "plate_biding_box": self.plate_biding_box,
-        }
+from pl8catch.data_model import DetectedObject, YAMLConfig
 
 
 def detect_plate(
-    image: np.ndarray, yolo_model: YOLO, yolo_plate_model: YOLO, config: dict[str, Any]
+    image: np.ndarray, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: YAMLConfig
 ) -> list[DetectedObject]:
     """
     This function takes an image, two YOLO models (one for general object detection, another for license plate detection),
@@ -49,8 +23,8 @@ def detect_plate(
         A YOLO model instance used for general object detection (e.g., cars, motorcycles).
     yolo_plate_model : YOLO model instance
         A YOLO model instance trained specifically for license plate detection.
-    config : dict
-        A dictionary containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
+    config : YAMLConfig
+        YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
 
     Returns
     ----------
@@ -63,7 +37,7 @@ def detect_plate(
         - `plate_biding_box`: A tuple representing the bounding boxes of detected license plate within the object (x_min, y_min, x_max, y_max).
     """
 
-    yolo_predictions = yolo_model.track(
+    yolo_predictions = yolo_object_model.track(
         image, persist=True, classes=[2, 3, 5, 7], verbose=False, tracker="bytetrack.yaml"
     )  # car, motorcycle, bus, truck
     detected_objects = []
@@ -114,9 +88,7 @@ def detect_plate(
 
                     # I noticed that if the resolution/area of the license plate is small results degrade, increasing it improves them
                     treated_roi = original_roi.copy()
-                    while (
-                        treated_roi.shape[0] * treated_roi.shape[1] < config["license_plate_ocr"]["resizing_threshold"]
-                    ):
+                    while treated_roi.shape[0] * treated_roi.shape[1] < config.license_plate_ocr.resizing_threshold:
                         treated_roi = cv2.resize(treated_roi, (2 * treated_roi.shape[1], 2 * treated_roi.shape[0]))
 
                     # Normalizing and thresholding image
@@ -127,19 +99,26 @@ def detect_plate(
 
                     # Extract Data from License Plate Image Segment using pytesseract
                     pytesseract_data = pytesseract.image_to_data(
-                        treated_roi, config=config["license_plate_ocr"]["pytesseract_config"], output_type="data.frame"
+                        treated_roi, config=config.license_plate_ocr.pytesseract_config, output_type="data.frame"
                     )
                     pytesseract_data = pytesseract_data[pytesseract_data["conf"] > 0.1][["conf", "text"]]
+
+                    # Extract license plate text and confidence
+                    license_plate_text, license_plate_confidence = (
+                        (str(pytesseract_data.iloc[0]["text"]), pytesseract_data.iloc[0]["conf"])
+                        if not pytesseract_data.empty
+                        else (None, None)
+                    )
 
                     # Append the recognized character to the list
                     detected_objects.append(
                         DetectedObject(
-                            object_id,
-                            pytesseract_data["text"].tolist(),
-                            pytesseract_data["conf"].tolist(),
-                            class_name,
-                            object_biding_box,
-                            plate_biding_box,
+                            object_id=object_id,
+                            license_plate_text=license_plate_text,
+                            license_plate_confidence=license_plate_confidence,
+                            predicted_object_type=class_name,
+                            object_biding_box=object_biding_box,
+                            plate_biding_box=plate_biding_box,
                         ),
                     )
 
