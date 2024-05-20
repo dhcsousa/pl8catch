@@ -12,6 +12,7 @@ opencv-python = "^4.9.0.80"
 pytesseract = "^0.3.10"
 ultralytics = "^8.2.13"
 streamlit = "^1.34.0"
+fastapi = "^0.111.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.4.0"
