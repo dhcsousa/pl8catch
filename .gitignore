@@ -1,2 +1,5 @@
 __pycache__/
 poetry.lock
+*.pt
+*.mp4
+.DS_Store

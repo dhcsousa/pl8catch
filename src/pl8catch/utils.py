@@ -1,28 +1,15 @@
-from typing import Any
+"""Basic utils for the backend of pl8catch"""
+
 import cv2
 import pytesseract
 import numpy as np
 from ultralytics import YOLO
 
-
-class DetectedObject:
-    def __init__(
-        self,
-        license_plate_text: str,
-        license_plate_confidence: float,
-        predicted_object_type: str,
-        object_biding_box: tuple[int, int, int, int],
-        detected_plates: list[tuple[int, int, int, int]],
-    ):
-        self.license_plate_text: str = license_plate_text
-        self.license_plate_confidence: float = license_plate_confidence
-        self.predicted_object_type: str = predicted_object_type
-        self.object_biding_box: tuple[int, int, int, int] = object_biding_box
-        self.detected_plates: list[tuple[int, int, int, int]] = detected_plates
+from pl8catch.data_model import DetectedObject, YAMLConfig
 
 
 def detect_plate(
-    image: np.ndarray, yolo_model: YOLO, yolo_plate_model: YOLO, config: dict[str, Any]
+    image: np.ndarray, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: YAMLConfig
 ) -> list[DetectedObject]:
     """
     This function takes an image, two YOLO models (one for general object detection, another for license plate detection),
@@ -36,8 +23,8 @@ def detect_plate(
         A YOLO model instance used for general object detection (e.g., cars, motorcycles).
     yolo_plate_model : YOLO model instance
         A YOLO model instance trained specifically for license plate detection.
-    config : dict
-        A dictionary containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
+    config : YAMLConfig
+        YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
 
     Returns
     ----------
@@ -47,15 +34,21 @@ def detect_plate(
         - `license_plate_confidence`: A list of confidence scores for each recognized character (might be empty if not detected).
         - `predicted_object_type`: The type of object predicted by the general YOLO model (e.g., "car").
         - `object_biding_box`: A tuple representing the bounding box of the detected object (x_min, y_min, x_max, y_max).
-        - `detected_plates`: A list of tuples representing the bounding boxes of detected license plates within the object (x_min, y_min, x_max, y_max).
+        - `plate_biding_box`: A tuple representing the bounding boxes of detected license plate within the object (x_min, y_min, x_max, y_max).
     """
 
-    yolo_predictions = yolo_model.predict(image, classes=[2, 3, 5, 7], verbose=False)  # car, motorcycle, bus, truck
+    yolo_predictions = yolo_object_model.track(
+        image, persist=True, classes=[2, 3, 5, 7], verbose=False, tracker="bytetrack.yaml"
+    )  # car, motorcycle, bus, truck
     detected_objects = []
 
     for result in yolo_predictions:
         if result.boxes:
             for box in result.boxes:
+                if box.id is not None:
+                    object_id = int(box.id.item())
+                else:
+                    object_id = None
                 x_min_vehicle, y_min_vehicle, x_max_vehicle, y_max_vehicle = (
                     int(box.xyxy[0][0]),
                     int(box.xyxy[0][1]),
@@ -71,11 +64,11 @@ def detect_plate(
                 )  # Store coordinates as a tuple
 
             plates = yolo_plate_model.predict(
-                image[y_min_vehicle:y_max_vehicle, x_min_vehicle:x_max_vehicle], verbose=False
+                image[y_min_vehicle:y_max_vehicle, x_min_vehicle:x_max_vehicle], verbose=False, max_det=1
             )  # Predict plates only within the car box
-            detected_plates = []
             for plate in plates:
                 for box in plate.boxes:
+                    # TODO (@Daniel.Sousa): Only the plate with highest confidence to be plotted?
                     x_min_relative_plate, y_min_relative_plate, x_max_relative_plate, y_max_relative_plate = (
                         int(box.xyxy[0][0]),
                         int(box.xyxy[0][1]),
@@ -87,7 +80,7 @@ def detect_plate(
                     y_min_plate = y_min_relative_plate + y_min_vehicle
                     y_max_plate = y_max_relative_plate + y_min_vehicle
 
-                    detected_plates.append((x_min_plate, y_min_plate, x_max_plate, y_max_plate))
+                    plate_biding_box = (x_min_plate, y_min_plate, x_max_plate, y_max_plate)
                     # TODO: Possible improvement, only append to detected_plate, after text is detected?
 
                     # OCR the license plate
@@ -95,9 +88,7 @@ def detect_plate(
 
                     # I noticed that if the resolution/area of the license plate is small results degrade, increasing it improves them
                     treated_roi = original_roi.copy()
-                    while (
-                        treated_roi.shape[0] * treated_roi.shape[1] < config["license_plate_ocr"]["resizing_threshold"]
-                    ):
+                    while treated_roi.shape[0] * treated_roi.shape[1] < config.license_plate_ocr.resizing_threshold:
                         treated_roi = cv2.resize(treated_roi, (2 * treated_roi.shape[1], 2 * treated_roi.shape[0]))
 
                     # Normalizing and thresholding image
@@ -108,20 +99,26 @@ def detect_plate(
 
                     # Extract Data from License Plate Image Segment using pytesseract
                     pytesseract_data = pytesseract.image_to_data(
-                        treated_roi, config=config["license_plate_ocr"]["pytesseract_config"], output_type="data.frame"
+                        treated_roi, config=config.license_plate_ocr.pytesseract_config, output_type="data.frame"
                     )
                     pytesseract_data = pytesseract_data[pytesseract_data["conf"] > 0.1][["conf", "text"]]
 
-                    print(pytesseract_data.shape)
+                    # Extract license plate text and confidence
+                    license_plate_text, license_plate_confidence = (
+                        (str(pytesseract_data.iloc[0]["text"]), pytesseract_data.iloc[0]["conf"])
+                        if not pytesseract_data.empty
+                        else (None, None)
+                    )
 
                     # Append the recognized character to the list
                     detected_objects.append(
                         DetectedObject(
-                            pytesseract_data["text"].tolist(),
-                            pytesseract_data["conf"].tolist(),
-                            class_name,
-                            object_biding_box,
-                            detected_plates,
+                            object_id=object_id,
+                            license_plate_text=license_plate_text,
+                            license_plate_confidence=license_plate_confidence,
+                            predicted_object_type=class_name,
+                            object_biding_box=object_biding_box,
+                            plate_biding_box=plate_biding_box,
                         ),
                     )
 
@@ -139,7 +136,9 @@ def detect_plate(
     return detected_objects  # image_with_yolo, image_side_by_side, roi_side_by_side
 
 
-def plot_objects_in_image(image: np.ndarray, detected_objects: list[DetectedObject]) -> np.ndarray:
+def plot_objects_in_image(
+    image: np.ndarray, detected_objects: list[DetectedObject], line_thickness: int = 5, font_scale: int = 2
+) -> np.ndarray:
     """
     Plot detected objects in the input image with annotations.
 
@@ -149,6 +148,10 @@ def plot_objects_in_image(image: np.ndarray, detected_objects: list[DetectedObje
         A NumPy array representing the image to be plotted.
     detected_objects : list of DetectedObject objects
         A list of DetectedObject objects containing information about detected objects and their bounding boxes.
+    line_thickness : int
+        Line thickness for the binding boxes rectangles
+    font_scale: int
+        Parameter used to control the text around the binding boxes
 
     Returns
     ----------
@@ -170,33 +173,33 @@ def plot_objects_in_image(image: np.ndarray, detected_objects: list[DetectedObje
             (object_bb[0], object_bb[1]),
             (object_bb[2], object_bb[3]),
             (255, 0, 0),
-            2,
+            line_thickness,
         )
         cv2.putText(
             image_with_annotations,
-            detected_object.predicted_object_type,
+            f"ID: {detected_object.object_id}, TYPE: {detected_object.predicted_object_type}",
             (object_bb[0], object_bb[1] - 10),
             cv2.FONT_HERSHEY_PLAIN,
-            1,
+            font_scale,
             (255, 0, 0),
-            1,
+            font_scale,
         )
-        for detected_plate in detected_object.detected_plates:
-            cv2.rectangle(
-                image_with_annotations,
-                (detected_plate[0], detected_plate[1]),
-                (detected_plate[2], detected_plate[3]),
-                (255, 0, 0),
-                2,
-            )
-            cv2.putText(
-                image_with_annotations,
-                "plate",
-                (detected_plate[0], detected_plate[1] - 10),
-                cv2.FONT_HERSHEY_PLAIN,
-                1,
-                (255, 0, 0),
-                1,
-            )
+        detected_plate = detected_object.plate_biding_box
+        cv2.rectangle(
+            image_with_annotations,
+            (detected_plate[0], detected_plate[1]),
+            (detected_plate[2], detected_plate[3]),
+            (255, 0, 0),
+            line_thickness,
+        )
+        cv2.putText(
+            image_with_annotations,
+            "plate",
+            (detected_plate[0], detected_plate[1] - 10),
+            cv2.FONT_HERSHEY_PLAIN,
+            font_scale,
+            (255, 0, 0),
+            font_scale,
+        )
 
     return image_with_annotations

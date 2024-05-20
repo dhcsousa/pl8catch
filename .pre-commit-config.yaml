@@ -32,6 +32,7 @@ repos:
         exclude: ^test/
         additional_dependencies:
           - types-PyYAML
+          - types-requests
   - repo: https://github.com/psf/black
     rev: 23.12.1
     hooks:

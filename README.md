@@ -11,6 +11,14 @@ Pl8Catch is a comprehensive license plate recognition system designed to detect 
 
 ## Execution
 
+### Backend
+
 ```bash
-streamlit run src/pl8catch/app.py
+python src/pl8catch/app.py
+```
+
+### Frontend
+
+```bash
+streamlit run src/frontend/app.py
 ```
