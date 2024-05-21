@@ -1,5 +1,8 @@
 """Basic utils for the backend of pl8catch"""
 
+import base64
+import json
+from typing import AsyncGenerator
 import cv2
 import pytesseract
 import numpy as np
@@ -19,7 +22,7 @@ def detect_plate(
     ----------
     image : numpy.ndarray
         A NumPy array representing the image to be processed.
-    yolo_model : YOLO model instance
+    yolo_object_model : YOLO model instance
         A YOLO model instance used for general object detection (e.g., cars, motorcycles).
     yolo_plate_model : YOLO model instance
         A YOLO model instance trained specifically for license plate detection.
@@ -122,18 +125,7 @@ def detect_plate(
                         ),
                     )
 
-                    # image_side_by_side = np.hstack((image, image_with_yolo))
-
-                    # # Find the difference in sizes
-                    # size_diff = max(treated_roi.shape[0] - original_roi.shape[0], 0)
-
-                    # # Pad original_roi with zeros at the end to match the size of treated_roi
-                    # padded_original_roi = np.pad(original_roi, ((0, size_diff), (0, 0), (0, 0)), mode="constant")
-
-                    # # Now, you can horizontally stack them
-                    # roi_side_by_side = np.hstack((padded_original_roi, treated_roi))
-
-    return detected_objects  # image_with_yolo, image_side_by_side, roi_side_by_side
+    return detected_objects
 
 
 def plot_objects_in_image(
@@ -203,3 +195,57 @@ def plot_objects_in_image(
         )
 
     return image_with_annotations
+
+
+async def stream_detected_frames(
+    video: cv2.VideoCapture, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: YAMLConfig
+) -> AsyncGenerator:  # TODO (@Daniel.Sousa): Unit tests
+    """
+    Stream video frames with object and license plate detection.
+
+    Parameters
+    ----------
+    video : cv2.VideoCapture
+        A cv2.VideoCapture object to capture video frames.
+    yolo_object_model : YOLO model instance
+        A YOLO model instance used for general object detection (e.g., cars, motorcycles).
+    yolo_plate_model : YOLO model instance
+        A YOLO model instance trained specifically for license plate detection.
+    config : YAMLConfig
+        YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
+
+    Returns
+    ----------
+    AsyncGenerator
+        A generator yielding video frames as JPEG-encoded bytes and detection data as json.
+
+    Notes
+    ----------
+    This function reads video frames from the provided video capture object,
+    detects objects and license plates in each frame, annotates the frame,
+    and then encodes it as JPEG. The resulting bytes are streamed in a format
+    compatible with MJPEG (multipart/x-mixed-replace).
+    """
+    while True:
+        success, frame = video.read()
+        if not success:
+            break
+
+        # Detect objects
+        detected_objects = detect_plate(frame, yolo_object_model, yolo_plate_model, config)
+        annotated_image = plot_objects_in_image(frame, detected_objects)
+
+        # Encode frame as JPEG
+        _, jpeg = cv2.imencode(".jpg", annotated_image)
+
+        # Convert frame to base64 string
+        frame_base64 = base64.b64encode(jpeg.tobytes()).decode("utf-8")
+
+        # Convert detected objects to dictionaries
+        detected_objects_dicts = [obj.model_dump() for obj in detected_objects]
+
+        # Create the payload
+        payload = {"frame": frame_base64, "detections": detected_objects_dicts}
+
+        # Yield the payload as JSON
+        yield (b"data: " + json.dumps(payload).encode() + b"\n\n")

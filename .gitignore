@@ -3,3 +3,4 @@ poetry.lock
 *.pt
 *.mp4
 .DS_Store
+.vscode/
