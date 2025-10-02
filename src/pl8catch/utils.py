@@ -8,11 +8,11 @@ import pytesseract
 import numpy as np
 from ultralytics import YOLO
 
-from pl8catch.data_model import DetectedObject, YAMLConfig
+from pl8catch.data_model import AppConfig, DetectedObject
 
 
 def detect_plate(
-    image: np.ndarray, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: YAMLConfig
+    image: np.ndarray, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: AppConfig
 ) -> list[DetectedObject]:
     """
     This function takes an image, two YOLO models (one for general object detection, another for license plate detection),
@@ -26,7 +26,7 @@ def detect_plate(
         A YOLO model instance used for general object detection (e.g., cars, motorcycles).
     yolo_plate_model : YOLO model instance
         A YOLO model instance trained specifically for license plate detection.
-    config : YAMLConfig
+    config : AppConfig
         YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
 
     Returns
@@ -198,7 +198,7 @@ def plot_objects_in_image(
 
 
 async def stream_detected_frames(
-    video: cv2.VideoCapture, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: YAMLConfig
+    video: cv2.VideoCapture, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: AppConfig
 ) -> AsyncGenerator:  # TODO (@Daniel.Sousa): Unit tests
     """
     Stream video frames with object and license plate detection.
@@ -211,7 +211,7 @@ async def stream_detected_frames(
         A YOLO model instance used for general object detection (e.g., cars, motorcycles).
     yolo_plate_model : YOLO model instance
         A YOLO model instance trained specifically for license plate detection.
-    config : YAMLConfig
+    config : AppConfig
         YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
 
     Returns

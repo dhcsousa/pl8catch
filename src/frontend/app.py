@@ -1,15 +1,22 @@
 """Frontend Streamlit APP for pl8catch"""
 
 import base64
-import json
-import streamlit as st
-import requests
-from PIL import Image
-import numpy as np
 import io
+import json
+import os
+
+from dotenv import load_dotenv
+import numpy as np
+import requests
+import streamlit as st
+from PIL import Image
 
 # Streamlit app title
 st.title("Pl8Catch - Vehicle Detection and License Plate Recognition")
+
+load_dotenv()
+
+BACKEND_ENDPOINT_ENV_VAR = "PL8CATCH_BACKEND_ENDPOINT"
 
 
 # Function to fetch video frames from FastAPI endpoint
@@ -55,6 +62,13 @@ def fetch_video_frames(backend_endpoint: str) -> None:
                 metadata_placeholder.json(detections)
 
 
-# Call the function with the FastAPI video endpoint URL
-backend_endpoint = "http://127.0.0.1:8000/video-detection"
-fetch_video_frames(backend_endpoint)
+# Call the function with the FastAPI video endpoint URL loaded from environment
+backend_endpoint = os.getenv(BACKEND_ENDPOINT_ENV_VAR)
+if backend_endpoint:
+    fetch_video_frames(backend_endpoint)
+else:
+    st.error(
+        "Backend endpoint not configured. Set the environment variable "
+        f"{BACKEND_ENDPOINT_ENV_VAR} in a .env file before running the app."
+    )
+    st.stop()

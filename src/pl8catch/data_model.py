@@ -1,28 +1,65 @@
-"""Data Model of the current implementation"""
+"""Data model and configuration loader for pl8catch."""
 
-from pydantic import BaseModel
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, TypeVar, cast
+
 import yaml
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pl8catch.environment import Environment
+
+
+env = Environment()  # type: ignore
+
+TConfig = TypeVar("TConfig", bound="BaseFileConfig")
+
+
+class BaseFileConfig(BaseModel):
+    """Utility mixin that adds file-based initialisation for Pydantic models."""
+
+    @classmethod
+    def from_file(cls: type[TConfig], file_path: str | Path) -> TConfig:
+        path = Path(file_path)
+        with path.open("r", encoding="utf-8") as stream:
+            raw_config: Any = yaml.safe_load(stream) or {}
+        return cast(TConfig, cls.model_validate(raw_config))
 
 
 class LicensePlateOCRConfig(BaseModel):
-    resizing_threshold: int
-    pytesseract_config: str
+    resizing_threshold: int = Field(description="Minimum area before upscaling the plate region.")
+    pytesseract_config: str = Field(description="CLI flags forwarded to pytesseract for OCR.")
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ModelsConfig(BaseModel):
-    object_detection: str
-    license_plate: str
+    object_detection: str = Field(description="Path to the YOLO model used for vehicle detection.")
+    license_plate: str = Field(description="Path to the YOLO model used for license plate detection.")
+
+    model_config = ConfigDict(extra="forbid")
 
 
-class YAMLConfig(BaseModel):
-    license_plate_ocr: LicensePlateOCRConfig
-    models: ModelsConfig
+class ServerConfig(BaseModel):
+    host: str = Field("127.0.0.1", description="Host to bind to.")
+    port: int = Field(8000, description="Port to bind to.")
+
+    model_config = ConfigDict(extra="forbid")
 
 
-def read_yaml(file_path: str) -> YAMLConfig:
-    with open(file_path, "r") as stream:
-        config = yaml.safe_load(stream)
-    return YAMLConfig(**config)
+class AppConfig(BaseFileConfig):
+    license_plate_ocr: LicensePlateOCRConfig = Field(
+        description="Configuration parameters for license plate preprocessing and OCR.",
+        validation_alias=AliasChoices("license_plate_ocr", "licensePlateOCR"),
+    )
+    models: ModelsConfig = Field(description="File paths for YOLO models used across the application.")
+    server: ServerConfig = Field(description="Server host and port configuration.")
+
+    model_config = ConfigDict(extra="allow")
+
+
+def read_yaml(file_path: str) -> AppConfig:
+    return AppConfig.from_file(file_path)
 
 
 class DetectedObject(BaseModel):
@@ -34,4 +71,4 @@ class DetectedObject(BaseModel):
     plate_biding_box: tuple[int, int, int, int]
 
 
-CONFIG = read_yaml("config.yaml")
+config: AppConfig = AppConfig.from_file(env.CONFIG_FILE_PATH)
