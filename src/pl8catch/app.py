@@ -7,12 +7,15 @@ from ultralytics import YOLO
 from fastapi import FastAPI
 
 
-from pl8catch.data_model import CONFIG
+from pl8catch.data_model import AppConfig
 from pl8catch.utils import stream_detected_frames
+from pl8catch.environment import Environment
 
+env = Environment()  # type: ignore
+config: AppConfig = AppConfig.from_file(env.CONFIG_FILE_PATH)
 
-yolo_object_model = YOLO(CONFIG.models.object_detection)
-yolo_plate_model = YOLO(CONFIG.models.license_plate)
+yolo_object_model = YOLO(config.models.object_detection)
+yolo_plate_model = YOLO(config.models.license_plate)
 
 app = FastAPI(
     title="Pl8Catch",
@@ -42,9 +45,9 @@ async def video_detection_endpoint() -> StreamingResponse:
     viewing in a web browser.
     """
     return StreamingResponse(
-        stream_detected_frames(video, yolo_object_model, yolo_plate_model, CONFIG), media_type="text/event-stream"
+        stream_detected_frames(video, yolo_object_model, yolo_plate_model, config), media_type="text/event-stream"
     )
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, port=8000, host="localhost")
+    uvicorn.run(app, port=config.server.port, host=config.server.host)
