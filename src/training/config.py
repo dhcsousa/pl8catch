@@ -50,7 +50,7 @@ class TrainConfig(BaseFileConfig):
 
     # MLflow tracking settings
     mlflow_enabled: bool = True  # Toggle MLflow tracking
-    mlflow_tracking_uri: Path = ROOT_DIR / "runs" / "mlflow"  # MLflow tracking URI
+    mlflow_tracking_uri: Path = ROOT_DIR / "mlflow"  # MLflow tracking URI
     mlflow_experiment_name: str = "pl8catch"  # MLflow experiment name
     mlflow_run_name: str  # Explicit MLflow run name
 

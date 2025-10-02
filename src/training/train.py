@@ -103,8 +103,9 @@ def main() -> None:
     model = YOLO(weights_path)
     train_args = build_train_arguments(config, config.mlflow_run_name, data_config_path)
 
-    logger.debug("YOLO.train arguments: {}", train_args)
+    logger.info("YOLO.train arguments: {}", train_args)
     model.train(**train_args)
+    logger.info("YOLO training complete")
 
 
 if __name__ == "__main__":
