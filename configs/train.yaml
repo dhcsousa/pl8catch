@@ -1,0 +1,12 @@
+# Default training configuration for the Pl8Catch YOLO workflow (if you wanna see all params, check TrainConfig)
+epochs: 100
+image_size: 640
+device: mps
+resume: false
+patience: 20
+seed: 42
+profile: false
+
+extra_train_args: {}
+
+mlflow_run_name: run_1
