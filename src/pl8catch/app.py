@@ -1,6 +1,6 @@
 """FastAPI backend of pl8catch"""
 
-from importlib_metadata import version
+from importlib.metadata import version
 from fastapi.responses import StreamingResponse
 import uvicorn
 import cv2
