@@ -1,0 +1,48 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "FastAPI: Backend (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "pl8catch.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Streamlit: Frontend",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "${workspaceFolder}/src/frontend/app.py"
+            ],
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Train: YOLO Model",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/training/train.py",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Pytest: All Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-q",
+                "test"
+            ],
+        }
+    ]
+}

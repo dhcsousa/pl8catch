@@ -8,6 +8,7 @@ authors = [{ name = "Daniel Sousa" }]
 packages = [{ include = "pl8catch", from = "src" }, { include = "training", from = "src" }]
 dependencies = [
 	"fastapi>=0.111",
+	"lap>=0.5.12",
 	"loguru>=0.7.3",
 	"opencv-python>=4.9.0.80",
 	"pydantic-settings>=2.11.0",
