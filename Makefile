@@ -1,4 +1,4 @@
-.PHONY: install backend frontend test lint format typecheck precommit clean
+.PHONY: install backend frontend train test lint format typecheck precommit clean
 
 install:
 	uv sync
@@ -8,6 +8,9 @@ backend:
 
 frontend:
 	uv run streamlit run src/frontend/app.py
+
+train:
+	uv run python training/train.py
 
 test:
 	uv run pytest

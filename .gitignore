@@ -150,7 +150,18 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# MacOS
 .DS_Store
 
 #Ruff
 .ruff_cache
+
+# Ignore training datasets
+downloaded_dataset/
+
+# Training artifacts (mlflow and yolo)
+yolo_runs/*
+mlflow/*
+
+# Ignore model weights
+*.pt

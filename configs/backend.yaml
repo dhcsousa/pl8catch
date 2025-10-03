@@ -7,8 +7,8 @@ license_plate_ocr:
   pytesseract_config: '--psm 8' # seems the most adequate config
 
 models:
-  object_detection: "models/yolov9c.pt"
-  license_plate: "models/license_plate_yolov9c.pt"
+  object_detection: "yolo12s.pt"
+  license_plate: "yolo_runs/run_1/weights/best.pt"
 
   # 6 = Assume a single uniform block of text.
   # 7 = Treat the image as a single text line.
