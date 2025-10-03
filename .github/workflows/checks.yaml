@@ -17,6 +17,12 @@ jobs:
         with:
           python-version-file: '.python-version'
 
+      - name: Install system dependencies (tesseract)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng libtesseract-dev
+          tesseract --version
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 

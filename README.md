@@ -1,3 +1,5 @@
+[![Pre-commit and Unit Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml)
+
 # Pl8Catch: The License Plate Tracker
 
 Pl8Catch is a comprehensive license plate recognition system designed to detect vehicles, extract license plate information, and provide a user-friendly interface for tracking and managing license plates.
