@@ -8,6 +8,7 @@ from pathlib import Path
 
 from loguru import logger
 from ultralytics import YOLO, settings
+from roboflow import Roboflow
 
 from training.config import Environment, TrainConfig
 
@@ -19,11 +20,11 @@ def configure_logging(level: str) -> None:
     logger.add(sys.stderr, level=level, colorize=True)
 
 
-def validate_paths(config: TrainConfig) -> tuple[Path, Path]:
+def validate_paths(config: TrainConfig) -> tuple[Path | str, Path]:
     """Validate and resolve the weights and dataset configuration paths."""
 
-    if not config.weights_path.exists():
-        raise FileNotFoundError(f"YOLO weights not found at {config.weights_path}")
+    if isinstance(config.weights_path, Path) and not config.weights_path.exists():
+        logger.warning(f"YOLO weights not found at {config.weights_path}, they will be downloaded if possible")
 
     if not config.data_config_path.exists():
         raise FileNotFoundError(
@@ -31,6 +32,42 @@ def validate_paths(config: TrainConfig) -> tuple[Path, Path]:
         )
 
     return config.weights_path, config.data_config_path
+
+
+def download_roboflow_dataset(env: Environment, config: TrainConfig) -> None:
+    """Download and extract the dataset from Roboflow using the provided configuration."""
+
+    if config.data_config_path.exists():
+        logger.info(
+            "Dataset configuration already present at {}. Skipping Roboflow download.",
+            config.data_config_path,
+        )
+        return
+
+    if env.ROBOFLOW_API_KEY is None:
+        logger.error("Roboflow API key not set, skipping dataset download")
+        return
+
+    rf = Roboflow(api_key=env.ROBOFLOW_API_KEY.get_secret_value())
+    workspace = rf.workspace(config.roboflow_workspace)
+    project = workspace.project(config.roboflow_project)
+    version = project.version(config.roboflow_version)
+
+    logger.info(
+        "Downloading dataset from Roboflow: workspace='{}', project='{}', version={}",
+        config.roboflow_workspace,
+        config.roboflow_project,
+        config.roboflow_version,
+    )
+    dataset = version.download(config.roboflow_export_format, location=str(config.datasets_dir))
+
+    if not config.data_config_path.exists():
+        raise FileNotFoundError(
+            "Dataset configuration not found after Roboflow download. "
+            f"Expected YOLO data.yaml at {config.data_config_path}"
+        )
+
+    logger.info("Roboflow dataset downloaded and extracted to {}", dataset.location)
 
 
 def configure_mlflow(config: TrainConfig) -> str | None:
@@ -75,6 +112,8 @@ def build_train_arguments(config: TrainConfig, run_name: str, data_config_path: 
         train_args["patience"] = config.patience
     if config.seed is not None:
         train_args["seed"] = config.seed
+    if config.fraction is not None:
+        train_args["fraction"] = config.fraction
     if config.extra_train_args:
         train_args.update(config.extra_train_args)
 
@@ -88,6 +127,8 @@ def main() -> None:
     config = TrainConfig.from_file(env.TRAINING_CONFIG_FILE_PATH)
 
     configure_logging(env.LOG_LEVEL)
+
+    download_roboflow_dataset(env, config)
 
     weights_path, data_config_path = validate_paths(config)
 

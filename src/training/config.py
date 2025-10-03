@@ -33,19 +33,18 @@ class TrainConfig(BaseFileConfig):
 
     datasets_dir: Path = ROOT_DIR / "downloaded_dataset"  # Directory registered with Ultralytics for dataset lookups
     data_config_path: Path = datasets_dir / "data.yaml"  # Path to the YOLO dataset configuration file
-    weights_path: Path = (
-        ROOT_DIR / "models" / "yolov9c.pt"
-    )  # Checkpoint used to initialise the YOLO model before training
+    weights_path: Path | str = "yolo12s.pt"  # Checkpoint used to initialise the YOLO model before training, it might be a string like "yolo12s.pt" and the model will be downloaded
     epochs: int  # Number of epochs to train for
     image_size: int  # Image size for training
     batch_size: int | None = None  # Optional batch size override
     device: str  # Device identifier
-    project_name: str = "pl8catch"  # Directory for training artefacts
+    project_name: str = "yolo_runs"  # Directory for training artefacts
     run_name: str | None = None  # Optional run identifier
     resume: bool = False  # Resume training from last checkpoint
     patience: int | None = None  # Optional early stopping patience
     seed: int | None = None  # Optional random seed
     profile: bool = False  # Enable Ultralytics profiler
+    fraction: float | None = None  # Optional dataset fraction (e.g., 0.1 to use 10% of the data)
     extra_train_args: dict[str, object] = Field(default_factory=dict)  # Additional keyword arguments for YOLO.train
 
     # MLflow tracking settings
@@ -57,5 +56,5 @@ class TrainConfig(BaseFileConfig):
     # Roboflow dataset metadata
     roboflow_workspace: str = "roboflow-universe-projects"
     roboflow_project: str = "license-plate-recognition-rxg4e"
-    roboflow_version: int = 4
-    roboflow_export_format: str = "yolov9"
+    roboflow_version: int = 11
+    roboflow_export_format: str = "yolov12"

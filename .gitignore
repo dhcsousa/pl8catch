@@ -157,3 +157,10 @@ cython_debug/
 
 # Ignore training datasets
 downloaded_dataset/
+
+# Training artifacts (mlflow and yolo)
+yolo_runs/*
+mlflow/*
+
+# Ignore model weights
+*.pt

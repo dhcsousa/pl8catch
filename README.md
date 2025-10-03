@@ -4,7 +4,7 @@ Pl8Catch is a comprehensive license plate recognition system designed to detect 
 
 ## Features
 
-- **YOLO Integration**: Utilizes YOLOv9 for efficient and accurate vehicle and license plate detection.
+- **YOLO Integration**: Utilizes YOLOv12 for efficient and accurate vehicle and license plate detection.
 - **OCR (Optical Character Recognition)**: Employs OCR techniques to extract text from license plates.
 - **FastAPI Backend**: Wraps the functionality into API using FastAPI for seamless integration into other applications.
 - **Streamlit Frontend**: Provides a frontend interface built with Streamlit for easy access and interaction. The frontend is just to demonstrate the API capabilities and is not intended for production use.
@@ -17,7 +17,7 @@ Ultralytics has native MLflow support, so you can keep track of metrics, paramet
 1. Start a local MLflow server (or point `MLFLOW_TRACKING_URI` to an existing server):
 
 	```bash
-	mlflow server
+	mlflow server --backend-store-uri mlflow
 	```
 
 2. Kick off training with sensible defaults and MLflow logging enabled:
