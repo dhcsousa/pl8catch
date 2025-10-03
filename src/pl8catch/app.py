@@ -1,5 +1,6 @@
 """FastAPI backend of pl8catch"""
 
+from importlib_metadata import version
 from fastapi.responses import StreamingResponse
 import uvicorn
 import cv2
@@ -7,6 +8,7 @@ from ultralytics import YOLO
 from fastapi import FastAPI
 
 
+from pl8catch.lifespan import lifespan
 from pl8catch.data_model import AppConfig
 from pl8catch.utils import stream_detected_frames
 from pl8catch.environment import Environment
@@ -19,8 +21,13 @@ yolo_plate_model = YOLO(config.models.license_plate)
 
 app = FastAPI(
     title="Pl8Catch",
-    version="0.0.1",
+    version=version("pl8catch"),
     summary="A API for vehicle detection and license plate recognition.",
+    lifespan=lifespan,
+    contact={
+        "name": "Daniel Sousa",
+        "email": "danielsoussa@gmail.com",
+    },
 )
 
 video_address = "demo_files/demo_video_trimmed.mp4"

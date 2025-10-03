@@ -4,19 +4,20 @@ import numpy as np
 import requests
 from ultralytics import YOLO
 
-from pl8catch.data_model import CONFIG, YAMLConfig
+from pl8catch.data_model import AppConfig
 
 
-@pytest.fixture()
-def config() -> YAMLConfig:
-    return CONFIG
+@pytest.fixture(scope="session")
+def config() -> AppConfig:
+    """Load application configuration once per test session."""
+    return AppConfig.from_file("configs/backend.yaml")
 
 
-@pytest.fixture()
-def models() -> tuple[YOLO, YOLO]:
-    yolo_object_model = YOLO(CONFIG.models.object_detection)
-    yolo_plate_model = YOLO(CONFIG.models.license_plate)
-
+@pytest.fixture(scope="session")
+def models(config: AppConfig) -> tuple[YOLO, YOLO]:
+    """Instantiate YOLO models only once; they are relatively heavy objects."""
+    yolo_object_model = YOLO(config.models.object_detection)
+    yolo_plate_model = YOLO(config.models.license_plate)
     return yolo_object_model, yolo_plate_model
 
 

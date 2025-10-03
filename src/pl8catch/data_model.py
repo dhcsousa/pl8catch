@@ -7,10 +7,7 @@ from typing import Any, TypeVar, cast
 
 import yaml
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
-from pl8catch.environment import Environment
 
-
-env = Environment()  # type: ignore
 
 TConfig = TypeVar("TConfig", bound="BaseFileConfig")
 
@@ -58,10 +55,6 @@ class AppConfig(BaseFileConfig):
     model_config = ConfigDict(extra="allow")
 
 
-def read_yaml(file_path: str) -> AppConfig:
-    return AppConfig.from_file(file_path)
-
-
 class DetectedObject(BaseModel):
     object_id: int | None  # Sometimes YOLO is returning None when its not relevant
     license_plate_text: str | None  # License plate might not be detected or recognized
@@ -69,6 +62,3 @@ class DetectedObject(BaseModel):
     predicted_object_type: str
     object_biding_box: tuple[int, int, int, int]
     plate_biding_box: tuple[int, int, int, int]
-
-
-config: AppConfig = AppConfig.from_file(env.CONFIG_FILE_PATH)

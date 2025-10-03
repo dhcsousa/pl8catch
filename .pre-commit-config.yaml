@@ -29,7 +29,7 @@ repos:
           --ignore-missing-imports,
         ]
         exclude_types: [ jupyter ]
-        exclude: ^test/
+        exclude: ^tests/
         additional_dependencies:
           - types-PyYAML
           - types-requests
