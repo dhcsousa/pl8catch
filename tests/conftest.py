@@ -46,7 +46,8 @@ def models(config: AppConfig) -> tuple[YOLO, YOLO]:
             Returns a list with a single result object containing one bounding box.
             """
 
-            def predict(self, *args, **kwargs):  # noqa: D401
+            def predict(self, *args, **kwargs):
+                """Return a list with a single dummy result containing one bounding box."""
                 return [_DummyResult()]
 
         yolo_plate_model = DummyPlateModel()  # type: ignore[assignment]
