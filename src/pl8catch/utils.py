@@ -36,8 +36,8 @@ def detect_plate(
         - `license_plate_text`: A list of recognized characters from the license plate (might be empty if not detected).
         - `license_plate_confidence`: A list of confidence scores for each recognized character (might be empty if not detected).
         - `predicted_object_type`: The type of object predicted by the general YOLO model (e.g., "car").
-        - `object_bouding_box`: A tuple representing the bounding box of the detected object (x_min, y_min, x_max, y_max).
-        - `plate_bouding_box`: A tuple representing the bounding boxes of detected license plate within the object (x_min, y_min, x_max, y_max).
+    - `object_bounding_box`: A tuple representing the bounding box of the detected object (x_min, y_min, x_max, y_max).
+    - `plate_bounding_box`: A tuple representing the bounding boxes of detected license plate within the object (x_min, y_min, x_max, y_max).
     """
 
     yolo_predictions = yolo_object_model.track(
@@ -59,7 +59,7 @@ def detect_plate(
                     int(box.xyxy[0][3]),
                 )
                 class_name = f"{result.names[int(box.cls[0])]}"
-                object_bouding_box = (
+                object_bounding_box = (
                     x_min_vehicle,
                     y_min_vehicle,
                     x_max_vehicle,
@@ -83,7 +83,7 @@ def detect_plate(
                     y_min_plate = y_min_relative_plate + y_min_vehicle
                     y_max_plate = y_max_relative_plate + y_min_vehicle
 
-                    plate_bouding_box = (x_min_plate, y_min_plate, x_max_plate, y_max_plate)
+                    plate_bounding_box = (x_min_plate, y_min_plate, x_max_plate, y_max_plate)
                     # TODO: Possible improvement, only append to detected_plate, after text is detected?
 
                     # OCR the license plate
@@ -120,8 +120,8 @@ def detect_plate(
                             license_plate_text=license_plate_text,
                             license_plate_confidence=license_plate_confidence,
                             predicted_object_type=class_name,
-                            object_bouding_box=object_bouding_box,
-                            plate_bouding_box=plate_bouding_box,
+                            object_bounding_box=object_bounding_box,
+                            plate_bounding_box=plate_bounding_box,
                         ),
                     )
 
@@ -159,7 +159,7 @@ def plot_objects_in_image(
     image_with_annotations = image.copy()
 
     for detected_object in detected_objects:
-        object_bb = detected_object.object_bouding_box
+        object_bb = detected_object.object_bounding_box
         cv2.rectangle(
             image_with_annotations,
             (object_bb[0], object_bb[1]),
@@ -176,7 +176,7 @@ def plot_objects_in_image(
             (255, 0, 0),
             font_scale,
         )
-        detected_plate = detected_object.plate_bouding_box
+        detected_plate = detected_object.plate_bounding_box
         cv2.rectangle(
             image_with_annotations,
             (detected_plate[0], detected_plate[1]),
