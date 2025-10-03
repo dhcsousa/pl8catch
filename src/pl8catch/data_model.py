@@ -60,5 +60,5 @@ class DetectedObject(BaseModel):
     license_plate_text: str | None  # License plate might not be detected or recognized
     license_plate_confidence: float | None  # License plate might not be detected or recognized
     predicted_object_type: str
-    object_biding_box: tuple[int, int, int, int]
-    plate_biding_box: tuple[int, int, int, int]
+    object_bounding_box: tuple[int, int, int, int]
+    plate_bounding_box: tuple[int, int, int, int]
