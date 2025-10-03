@@ -37,7 +37,7 @@ jobs:
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Run unit tests
-        run: uv run pytest -q test/unit || (echo "Unit tests failed" && exit 1)
+        run: uv run pytest -q tests/unit || (echo "Unit tests failed" && exit 1)
         continue-on-error: false
 
       - name: Prune uv cache
