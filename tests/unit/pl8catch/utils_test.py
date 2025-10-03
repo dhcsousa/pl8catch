@@ -18,10 +18,10 @@ def test_detect_plate(config, models, test_image):
     assert isinstance(detected_car.license_plate_text, str)
     assert isinstance(detected_car.license_plate_confidence, float)
     assert isinstance(detected_car.predicted_object_type, str)
-    assert isinstance(detected_car.object_bouding_box, tuple)
-    assert len(detected_car.object_bouding_box) == 4
-    assert isinstance(detected_car.plate_bouding_box, tuple)
-    assert len(detected_car.plate_bouding_box) == 4
+    assert isinstance(detected_car.object_bounding_box, tuple)
+    assert len(detected_car.object_bounding_box) == 4
+    assert isinstance(detected_car.plate_bounding_box, tuple)
+    assert len(detected_car.plate_bounding_box) == 4
 
 
 @pytest.fixture()
@@ -33,16 +33,16 @@ def sample_detected_objects():
             license_plate_text="ABC123",
             license_plate_confidence=0.9,
             predicted_object_type="car",
-            object_bouding_box=(50, 50, 150, 150),
-            plate_bouding_box=(70, 70, 120, 90),
+            object_bounding_box=(50, 50, 150, 150),
+            plate_bounding_box=(70, 70, 120, 90),
         ),
         DetectedObject(
             object_id=2,
             license_plate_text="XYZ456",
             license_plate_confidence=0.8,
             predicted_object_type="truck",
-            object_bouding_box=(200, 200, 300, 300),
-            plate_bouding_box=(220, 220, 280, 240),
+            object_bounding_box=(200, 200, 300, 300),
+            plate_bounding_box=(220, 220, 280, 240),
         ),
     ]
     return detected_objects
