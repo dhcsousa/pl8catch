@@ -7,6 +7,7 @@ from typing import AsyncGenerator, Iterator, Tuple
 import cv2
 import numpy as np
 import pytesseract
+from pytesseract import TesseractError  # specific error raised by OCR backend
 from loguru import logger
 from ultralytics import YOLO
 
@@ -353,7 +354,7 @@ async def stream_frame_and_detections_multipart(
                 + b"\r\n"
             )
             yield jpeg_part
-        except Exception as exc:  # noqa: BLE001
+        except (cv2.error, TesseractError) as exc:
             logger.exception(f"Error processing frame_index={frame_index}: {exc}")
             continue
     yield b"--frame--\r\n"
