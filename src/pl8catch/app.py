@@ -1,20 +1,24 @@
 """FastAPI backend of pl8catch"""
 
 from importlib.metadata import version
+from loguru import logger
 from fastapi.responses import StreamingResponse
 import uvicorn
 import cv2
 from ultralytics import YOLO
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 
 from pl8catch.lifespan import lifespan
-from pl8catch.data_model import AppConfig
-from pl8catch.utils import stream_detected_frames
+from pl8catch.data_model import AppConfig, VideoSource
+from pl8catch.utils import stream_frame_and_detections_multipart
 from pl8catch.environment import Environment
+from pl8catch.log import configure_logging
 
-env = Environment()  # type: ignore
+env: Environment = Environment()
 config: AppConfig = AppConfig.from_file(env.CONFIG_FILE_PATH)
+
+configure_logging(env.LOG_LEVEL)
 
 yolo_object_model = YOLO(config.models.object_detection)
 yolo_plate_model = YOLO(config.models.license_plate)
@@ -30,29 +34,40 @@ app = FastAPI(
     },
 )
 
-video_address = "demo_files/demo_video_trimmed.mp4"
-video = cv2.VideoCapture(video_address)
 
+@app.post("/video-detection", summary="Stream annotated frames + detections (multipart)")
+async def video_detection_endpoint(payload: VideoSource) -> StreamingResponse:
+    """Stream annotated frames and detection metadata via multipart/mixed.
 
-@app.get("/video-detection")
-async def video_detection_endpoint() -> StreamingResponse:
-    """
-    FastAPI endpoint for video detection.
+    For each processed frame two parts are emitted with boundary 'frame':
+      1. JSON metadata (application/json)
+      2. Annotated JPEG (image/jpeg)
+
+    Parameters
+    ----------
+    payload : VideoSource
+        The request object containing the video source URL or file path.
 
     Returns
-    ----------
+    -------
     StreamingResponse
-        A streaming response with the video frames, encoded as JPEG images and streamed in a format
-        compatible with MJPEG (multipart/x-mixed-replace).
+        A streaming response with media type multipart/mixed.
 
-    Notes
-    ----------
-    This endpoint captures video frames from a predefined video file, detects objects and license plates
-    in each frame, annotates the frames, and streams them to the client. The stream is intended for real-time
-    viewing in a web browser.
+    Raises
+    ------
+    HTTPException
+        If the video source cannot be opened.
+
     """
+    source = payload.source
+    logger.info("Starting multipart video detection stream for source: %s", source)
+    video = cv2.VideoCapture(source)
+    if not video.isOpened():
+        raise HTTPException(status_code=400, detail=f"Cannot open video source: {source}")
+
     return StreamingResponse(
-        stream_detected_frames(video, yolo_object_model, yolo_plate_model, config), media_type="text/event-stream"
+        stream_frame_and_detections_multipart(video, yolo_object_model, yolo_plate_model, config),
+        media_type="multipart/mixed; boundary=frame",
     )
 
 

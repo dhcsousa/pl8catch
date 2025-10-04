@@ -62,3 +62,7 @@ class DetectedObject(BaseModel):
     predicted_object_type: str
     object_bounding_box: tuple[int, int, int, int]
     plate_bounding_box: tuple[int, int, int, int]
+
+
+class VideoSource(BaseModel):
+    source: str

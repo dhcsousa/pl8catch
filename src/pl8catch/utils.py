@@ -1,17 +1,18 @@
-"""Basic utils for the backend of pl8catch"""
+"""Backend streaming utilities (combined multipart frames + detections)."""
 
-import base64
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Tuple
+import asyncio
 import cv2
 import pytesseract
 import numpy as np
+from loguru import logger
 from ultralytics import YOLO
 
 from pl8catch.data_model import AppConfig, DetectedObject
 
 
-def detect_plate(
+def _detect_plate(
     image: np.ndarray, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: AppConfig
 ) -> list[DetectedObject]:
     """
@@ -40,6 +41,7 @@ def detect_plate(
     - `plate_bounding_box`: A tuple representing the bounding boxes of detected license plate within the object (x_min, y_min, x_max, y_max).
     """
 
+    logger.debug("Starting object tracking on frame of shape {}", image.shape)
     yolo_predictions = yolo_object_model.track(
         image, persist=True, classes=[2, 3, 5, 7], verbose=False, tracker="bytetrack.yaml"
     )  # car, motorcycle, bus, truck
@@ -66,6 +68,7 @@ def detect_plate(
                     y_max_vehicle,
                 )  # Store coordinates as a tuple
 
+            logger.debug("Detected object id={}, class={}, bbox=%s", object_id, class_name, object_bounding_box)
             plates = yolo_plate_model.predict(
                 image[y_min_vehicle:y_max_vehicle, x_min_vehicle:x_max_vehicle], verbose=False, max_det=1
             )  # Predict plates only within the car box
@@ -114,6 +117,13 @@ def detect_plate(
                     )
 
                     # Append the recognized character to the list
+                    logger.debug(
+                        "Plate candidate for object_id=%s plate_bbox=%s text=%s conf=%s",
+                        object_id,
+                        plate_bounding_box,
+                        license_plate_text,
+                        license_plate_confidence,
+                    )
                     detected_objects.append(
                         DetectedObject(
                             object_id=object_id,
@@ -125,10 +135,11 @@ def detect_plate(
                         ),
                     )
 
+    logger.debug("Frame processing complete: %d objects detected", len(detected_objects))
     return detected_objects
 
 
-def plot_objects_in_image(
+def _plot_objects_in_image(
     image: np.ndarray, detected_objects: list[DetectedObject], line_thickness: int = 5, font_scale: int = 2
 ) -> np.ndarray:
     """
@@ -156,6 +167,7 @@ def plot_objects_in_image(
     Bounding boxes are drawn around each detected object and license plate(s), and the predicted object type is annotated above each object bounding box.
     """
 
+    logger.trace("Annotating %d objects on frame", len(detected_objects))
     image_with_annotations = image.copy()
 
     for detected_object in detected_objects:
@@ -197,55 +209,69 @@ def plot_objects_in_image(
     return image_with_annotations
 
 
-async def stream_detected_frames(
+def _process_frame(
+    frame: np.ndarray,
+    frame_index: int,
+    yolo_object_model: YOLO,
+    yolo_plate_model: YOLO,
+    config: AppConfig,
+) -> Tuple[list[DetectedObject], bytes, dict]:
+    """Synchronous inference + annotation -> returns detections, jpeg bytes, and metadata payload."""
+    detected_objects = _detect_plate(frame, yolo_object_model, yolo_plate_model, config)
+    annotated = _plot_objects_in_image(frame, detected_objects)
+    ok, jpeg_mat = cv2.imencode(".jpg", annotated)
+    if not ok:
+        raise RuntimeError("JPEG encode failed")
+    jpeg_bytes = jpeg_mat.tobytes()
+    detections_dicts = [o.model_dump() for o in detected_objects]
+    payload = {"frame_index": frame_index, "detections": detections_dicts}
+    return detected_objects, jpeg_bytes, payload
+
+
+async def stream_frame_and_detections_multipart(
     video: cv2.VideoCapture, yolo_object_model: YOLO, yolo_plate_model: YOLO, config: AppConfig
-) -> AsyncGenerator:  # TODO (@Daniel.Sousa): Unit tests
+) -> AsyncGenerator[bytes, None]:
+    """Yield alternating JSON and JPEG parts over multipart/mixed without duplicate inference.
+
+    Pattern per frame:
+        --frame\r\n
+        Content-Type: application/json\r\n\r\n
+        { ...metadata... }\r\n
+        --frame\r\n
+        Content-Type: image/jpeg\r\nContent-Length: N\r\n\r\n
+        <jpeg bytes>\r\n
+    Terminates with: --frame--\r\n
     """
-    Stream video frames with object and license plate detection.
-
-    Parameters
-    ----------
-    video : cv2.VideoCapture
-        A cv2.VideoCapture object to capture video frames.
-    yolo_object_model : YOLO model instance
-        A YOLO model instance used for general object detection (e.g., cars, motorcycles).
-    yolo_plate_model : YOLO model instance
-        A YOLO model instance trained specifically for license plate detection.
-    config : AppConfig
-        YAMLConfig containing configuration parameters for various steps (e.g., license plate OCR resizing threshold).
-
-    Returns
-    ----------
-    AsyncGenerator
-        A generator yielding video frames as JPEG-encoded bytes and detection data as json.
-
-    Notes
-    ----------
-    This function reads video frames from the provided video capture object,
-    detects objects and license plates in each frame, annotates the frame,
-    and then encodes it as JPEG. The resulting bytes are streamed in a format
-    compatible with MJPEG (multipart/x-mixed-replace).
-    """
+    boundary = b"--frame"
+    frame_index = 0
     while True:
-        success, frame = video.read()
-        if not success:
+        ok, frame = video.read()
+        if not ok:
+            logger.info("Multipart stream ended at frame_index=%d", frame_index)
             break
-
-        # Detect objects
-        detected_objects = detect_plate(frame, yolo_object_model, yolo_plate_model, config)
-        annotated_image = plot_objects_in_image(frame, detected_objects)
-
-        # Encode frame as JPEG
-        _, jpeg = cv2.imencode(".jpg", annotated_image)
-
-        # Convert frame to base64 string
-        frame_base64 = base64.b64encode(jpeg.tobytes()).decode("utf-8")
-
-        # Convert detected objects to dictionaries
-        detected_objects_dicts = [obj.model_dump() for obj in detected_objects]
-
-        # Create the payload
-        payload = {"frame": frame_base64, "detections": detected_objects_dicts}
-
-        # Yield the payload as JSON
-        yield (b"data: " + json.dumps(payload).encode() + b"\n\n")
+        frame_index += 1
+        try:
+            # Run blocking processing in a thread to avoid blocking the event loop
+            _det, jpeg_bytes, payload = await asyncio.to_thread(
+                _process_frame, frame, frame_index, yolo_object_model, yolo_plate_model, config
+            )
+            json_part = (
+                boundary
+                + b"\r\nContent-Type: application/json\r\n\r\n"
+                + json.dumps(payload, separators=(",", ":")).encode()
+                + b"\r\n"
+            )
+            yield json_part
+            jpeg_part = (
+                boundary
+                + b"\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                + str(len(jpeg_bytes)).encode()
+                + b"\r\n\r\n"
+                + jpeg_bytes
+                + b"\r\n"
+            )
+            yield jpeg_part
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Error processing frame_index=%d: %s", frame_index, exc)
+            continue
+    yield b"--frame--\r\n"
