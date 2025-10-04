@@ -144,7 +144,7 @@ def test_plot_objects_in_image(sample_detected_objects):
     blue_pixel_found = False
     for row in annotated_image:
         for pixel in row:
-            if (pixel == [255, 0, 0]).all():  # Blue color represented as [255, 0, 0] in OpenCV
+            if (pixel == [255, 0, 0]).all():  # Blue color in OpenCV's BGR format is [255, 0, 0]
                 blue_pixel_found = True
                 break
         if blue_pixel_found:
