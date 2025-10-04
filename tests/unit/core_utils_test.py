@@ -1,3 +1,5 @@
+"""Unit tests for core utils"""
+
 import numpy as np
 import pandas as pd
 import pytesseract
@@ -14,43 +16,6 @@ from pl8catch.core.utils import (
     _process_frame,
 )
 from pl8catch.logging.setup import configure_logging
-
-
-class DummyTrackBox:
-    def __init__(self):
-        import numpy as _np
-
-        self.id = _np.array([1])
-        self.cls = _np.array([2])
-        self.xyxy = _np.array([[0, 0, 10, 10]])
-
-
-class DummyTrackResult:
-    def __init__(self):
-        self.boxes = [DummyTrackBox()]
-        self.names = {2: "car"}
-
-
-class DummyVehicleModel:
-    def track(self, *a, **k):
-        return [DummyTrackResult()]
-
-
-class DummyPlateBox:
-    def __init__(self):
-        import numpy as _np
-
-        self.xyxy = _np.array([[1, 1, 5, 4]])
-
-
-class DummyPlateResult:
-    def __init__(self):
-        self.boxes = [DummyPlateBox()]
-
-
-class DummyPlateModel:
-    def predict(self, *a, **k):
-        return [DummyPlateResult()]
 
 
 def test_ocr_plate_returns_first(monkeypatch):
@@ -81,10 +46,9 @@ def test_prepare_plate_roi_preserves_binary():
     assert out.min() >= 0 and out.max() <= 255
 
 
-def test_process_frame_single_detection(monkeypatch):
+def test_process_frame_single_detection(monkeypatch, models):
     frame = (np.zeros((20, 20, 3))).astype("uint8")
-    vehicle_model = DummyVehicleModel()
-    plate_model = DummyPlateModel()
+    vehicle_model, plate_model = models
 
     # Patch internal OCR functions to avoid tesseract
     from pl8catch.core import utils as utils_mod

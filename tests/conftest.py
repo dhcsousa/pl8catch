@@ -1,81 +1,114 @@
 from pathlib import Path
-
 import cv2
 from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 import requests
-from pl8catch.app import app
+
 from pl8catch.config import AppConfig
-from ultralytics import YOLO
 
 
 @pytest.fixture(scope="session")
 def config() -> AppConfig:
-    """Load application configuration once per test session."""
     return AppConfig.from_file("configs/backend.yaml")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _patch_yolo_plate(config: AppConfig):
+    plate_path = Path(config.models.license_plate)
+    if plate_path.exists():
+        return  # real weights available – do nothing keep real YOLO model
+
+    # Else use dummy model as plate detector
+    import ultralytics  # type: ignore
+    from ultralytics import YOLO as RealYOLO  # type: ignore
+
+    import numpy as _np
+
+    class _DummyPlateBox:
+        def __init__(self):
+            self.xyxy = _np.array([[0, 0, 60, 36]])
+            self.id = None
+            self.cls = _np.array([0])
+
+    class _DummyPlateResult:
+        def __init__(self):
+            self.boxes = [_DummyPlateBox()]
+            self.names = {0: "plate"}
+
+    class _DummyPlateModel:
+        def predict(self, *_, **__):
+            return [_DummyPlateResult()]
+
+    # Subclass wrapper to intercept creation for the missing plate path
+    class PatchedYOLO(RealYOLO):
+        def __new__(cls, model="yolo_stub.pt", *a, **k):
+            if isinstance(model, (str, Path)) and str(model) == str(plate_path):
+                return _DummyPlateModel()
+            return RealYOLO(model, *a, **k)
+
+    ultralytics.YOLO = PatchedYOLO
+
+
 @pytest.fixture(scope="session")
-def models(config: AppConfig) -> tuple[YOLO, YOLO]:
-    """Instantiate YOLO models only once; they are relatively heavy objects."""
-    yolo_object_model = YOLO(config.models.object_detection)
+def models():
+    import numpy as _np
 
-    # Provide a lightweight fallback for the license plate model when the weights file
-    # is not available in CI or local test environments. This avoids test failures due
-    # to missing artifact (e.g., yolo_runs/run_1/weights/best.pt) while still exercising
-    # the detection pipeline downstream (detect_plate and plotting logic).
-    license_plate_weights = Path(config.models.license_plate)
+    class _VehicleBox:
+        def __init__(self):
+            self.id = _np.array([1])
+            self.cls = _np.array([2])
+            self.xyxy = _np.array([[0, 0, 100, 60]])
 
-    if license_plate_weights.exists():
-        yolo_plate_model = YOLO(config.models.license_plate)
-    else:
+    class _VehicleResult:
+        def __init__(self):
+            self.boxes = [_VehicleBox()]
+            self.names = {2: "car"}
 
-        class _DummyBox:
-            """Mimics a single YOLO box structure with xyxy coordinates."""
+    class DummyVehicleModel:
+        def track(self, *_a, **_k):
+            return [_VehicleResult()]
 
-            def __init__(self):
-                # (x_min, y_min, x_max, y_max) small dummy plate region
-                self.xyxy = np.array([[0, 0, 50, 30]])
+    class _PlateBox:
+        def __init__(self):
+            self.xyxy = _np.array([[10, 10, 60, 40]])
 
-        class _DummyResult:
-            def __init__(self):
-                self.boxes = [_DummyBox()]
+    class _PlateResult:
+        def __init__(self):
+            self.boxes = [_PlateBox()]
 
-        class DummyPlateModel:
-            """Minimal stub replicating the predict() API used in tests.
+    class DummyPlateModel:
+        def predict(self, *_a, **_k):
+            return [_PlateResult()]
 
-            Returns a list with a single result object containing one bounding box.
-            """
-
-            def predict(self, *args, **kwargs):
-                """Return a list with a single dummy result containing one bounding box."""
-                return [_DummyResult()]
-
-        yolo_plate_model = DummyPlateModel()  # type: ignore[assignment]
-
-    return yolo_object_model, yolo_plate_model
+    return DummyVehicleModel(), DummyPlateModel()
 
 
 @pytest.fixture()
+@pytest.mark.network
 def test_image() -> np.ndarray:
-    # Image URL
-    # Image obtained from https://www.roadandtrack.com/new-cars/
-    image_address = "https://hips.hearstapps.com/hmg-prod/images/rs357223-1626456047.jpg"
+    url = "https://hips.hearstapps.com/hmg-prod/images/rs357223-1626456047.jpg"
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    img_np = np.asarray(bytearray(response.content), dtype=np.uint8)
+    return cv2.imdecode(img_np, cv2.IMREAD_COLOR)
 
-    # Download the image
-    response = requests.get(image_address, timeout=10)
-    response.raise_for_status()  # Raise an exception if the download fails
 
-    # Read the image using OpenCV
-    image_np_array = np.asarray(bytearray(response.content), dtype=np.uint8)
-    image = cv2.imdecode(image_np_array, cv2.IMREAD_COLOR)
-
-    # Return the image
-    return image
+@pytest.fixture()
+def single_frame_video(tmp_path, test_image: np.ndarray) -> Path:
+    """Create a temporary single-frame MJPG video for streaming tests."""
+    video_path = tmp_path / "single_frame.avi"
+    h, w = test_image.shape[:2]
+    writer = cv2.VideoWriter(str(video_path), cv2.VideoWriter_fourcc(*"MJPG"), 1.0, (w, h))
+    for _ in range(2):  # a couple frames
+        writer.write(test_image)
+    writer.release()
+    return video_path
 
 
 @pytest.fixture()
 def client():
+    from pl8catch.app import app
+
     with TestClient(app) as c:
         yield c
