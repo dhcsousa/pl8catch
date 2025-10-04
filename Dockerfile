@@ -17,6 +17,23 @@ COPY src ./src
 
 RUN uv sync --frozen --no-dev --native-tls
 
+# Stage to fetch model weights (kept separate for better layer caching)
+FROM alpine:latest AS weights
+
+ARG YOLO12_URL="https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt" \
+      LICENSE_PLATE_URL="https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt" \
+      YOLO12_SHA="" \
+      LICENSE_PLATE_SHA=""
+RUN set -eux; \
+      apk add --no-cache curl coreutils; \
+      mkdir -p /models; \
+      echo "Downloading weights"; \
+      curl -L "$YOLO12_URL" -o /models/yolo12s.pt; \
+      curl -L "$LICENSE_PLATE_URL" -o /models/license_plate_model.pt; \
+      if [ -n "$YOLO12_SHA" ]; then echo "$YOLO12_SHA  /models/yolo12s.pt" | sha256sum -c -; fi; \
+      if [ -n "$LICENSE_PLATE_SHA" ]; then echo "$LICENSE_PLATE_SHA  /models/license_plate_model.pt" | sha256sum -c -; fi; \
+      ls -lh /models
+
 # Runtime stage
 FROM astral/uv:python3.12-bookworm AS runtime
 
@@ -33,8 +50,8 @@ RUN apt-get update \
 USER appuser
 
 COPY --from=builder /app /app
-COPY yolo12s.pt /app/models/yolo12s.pt
-COPY yolo_runs/run_1/weights/best.pt /app/models/license_plate_model.pt
+COPY --from=weights /models/yolo12s.pt /app/models/yolo12s.pt
+COPY --from=weights /models/license_plate_model.pt /app/models/license_plate_model.pt
 
 ENV PATH="/app/.venv/bin:$PATH"
 

@@ -13,6 +13,8 @@ It showcases:
 
 If the dataset isn’t present locally, it is downloaded automatically from Roboflow (requires `ROBOFLOW_API_KEY`).
 
+> Model Weights: The fine‑tuned license plate detection model is published on Hugging Face at: https://huggingface.co/danielhcsousa/pl8catch, however the main repository for this project is still this one. The base YOLOv12 `yolo12s.pt` weights can be fetched from the Ultralytics public assets. HuggingFace was used to make sure this repository is not overloaded with large binary files, also for convenience since it provides easy versioning and download links.
+
 ---
 
 ## Features
@@ -136,7 +138,7 @@ The client submits to `/video-detection` with a JSON body containing `source` an
 
 ## Docker / Container Image
 
-You can build and run the backend inside a container. The `Dockerfile` uses a two-stage build (builder + slim runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, copies YOLO weights, and launches `uvicorn` on port 8000.
+You can build and run the backend inside a container. The `Dockerfile` uses a multi-stage build (builder → weights fetch → runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, downloads YOLO + license plate weights from remote sources (Hugging Face + Ultralytics assets), and launches `uvicorn` on port 8000.
 
 ### Published Image
 
@@ -180,9 +182,9 @@ just docker-run
 
 - Python 3.12 (Debian bookworm) via `astral/uv`
 - Pre-synced virtual environment at `/app/.venv`
-- Weights copied to `/app/models/`:
-	- `yolo12s.pt` (object detector base)
-	- `license_plate_model.pt` (fine-tuned plate model)
+- Weights downloaded (build stage) into `/app/models/`:
+	- `yolo12s.pt` (base YOLOv12 variant from Ultralytics assets)
+	- `license_plate_model.pt` (fine‑tuned license plate model from Hugging Face: `danielhcsousa/pl8catch`)
 - Command: `uvicorn pl8catch.app:app --host 0.0.0.0 --port 8000`
 
 ---
