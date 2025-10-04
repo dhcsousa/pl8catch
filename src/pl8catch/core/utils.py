@@ -135,7 +135,7 @@ def _ocr_plate(
         Extracted text (first token) and its confidence, or (None, None) if nothing valid detected.
     """
     data = pytesseract.image_to_data(image, config=pytesseract_cli_config, output_type="data.frame")
-    data = data[data["conf"] > confidence_threshold][["conf", "text"]]  # filter very low confidence noise
+    data = data[data["conf"] >= confidence_threshold][["conf", "text"]]  # filter very low confidence noise
     if data.empty:
         return None, None
     first = data.iloc[0]
