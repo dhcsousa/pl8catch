@@ -141,12 +141,4 @@ def test_plot_objects_in_image(sample_detected_objects):
     assert annotated_image.shape == image.shape
 
     # Check if at least one pixel has the annotation color
-    annotation_pixel_found = False
-    for row in annotated_image:
-        for pixel in row:
-            if (pixel == [255, 0, 0]).all():
-                annotation_pixel_found = True
-                break
-        if annotation_pixel_found:
-            break
-    assert annotation_pixel_found
+    assert np.any(np.all(annotated_image == [255, 0, 0], axis=2))
