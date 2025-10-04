@@ -80,7 +80,7 @@ class VideoSource(BaseModel):
     Parameters
     ----------
     source : str
-        Path or URI passed directly to ``cv2.VideoCapture``.
+        Path or URI passed directly to cv2.VideoCapture.
     """
 
     source: str

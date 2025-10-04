@@ -32,13 +32,18 @@ class LicensePlateOCRConfig(BaseModel):
     Parameters
     ----------
     resizing_threshold : int
-        Minimum area (``width * height``) required before upscaling the plate region.
+        Minimum area (width * height) required before upscaling the plate region.
     pytesseract_config : str
-        CLI flags forwarded verbatim to ``pytesseract``.
+        CLI flags forwarded verbatim to pytesseract.
+    confidence_threshold : float
+        Minimum OCR token confidence (default is 0.1) for pytesseract. Helps filter noise.
     """
 
     resizing_threshold: int = Field(description="Minimum area before upscaling the plate region.")
     pytesseract_config: str = Field(description="CLI flags forwarded to pytesseract for OCR.")
+    confidence_threshold: float = Field(
+        0.1, description="Minimum OCR token confidence (0..1) to keep when parsing pytesseract results."
+    )
 
     model_config = ConfigDict(extra="forbid")
 

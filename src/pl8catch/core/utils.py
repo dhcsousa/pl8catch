@@ -115,7 +115,9 @@ def _prepare_plate_roi(roi: np.ndarray, min_area: int) -> np.ndarray:
     return treated
 
 
-def _ocr_plate(image: np.ndarray, pytesseract_cli_config: str) -> tuple[str | None, float | None]:
+def _ocr_plate(
+    image: np.ndarray, pytesseract_cli_config: str, confidence_threshold: float
+) -> tuple[str | None, float | None]:
     """Perform OCR on a prepared license plate image.
 
     Parameters
@@ -123,15 +125,17 @@ def _ocr_plate(image: np.ndarray, pytesseract_cli_config: str) -> tuple[str | No
     image : numpy.ndarray
         Pre-processed (binarised / normalised) plate image.
     pytesseract_cli_config : str
-        CLI arguments forwarded to Tesseract (e.g. ``--psm 7``).
+        CLI arguments forwarded to Tesseract (e.g. --psm 7).
+    confidence_threshold : float
+        Minimum confidence (0-1) for a token to be considered valid.
 
     Returns
     -------
     tuple[str | None, float | None]
-        Extracted text (first token) and its confidence, or ``(None, None)`` if nothing valid detected.
+        Extracted text (first token) and its confidence, or (None, None) if nothing valid detected.
     """
     data = pytesseract.image_to_data(image, config=pytesseract_cli_config, output_type="data.frame")
-    data = data[data["conf"] > 0.1][["conf", "text"]]  # filter very low confidence noise
+    data = data[data["conf"] > confidence_threshold][["conf", "text"]]  # filter very low confidence noise
     if data.empty:
         return None, None
     first = data.iloc[0]
@@ -183,7 +187,11 @@ def _detect_plate(
             x_min_p, y_min_p, x_max_p, y_max_p = plate_bbox.as_xyxy()
             roi = image[y_min_p:y_max_p, x_min_p:x_max_p]
             prepared = _prepare_plate_roi(roi, config.license_plate_ocr.resizing_threshold)
-            plate_text, plate_conf = _ocr_plate(prepared, config.license_plate_ocr.pytesseract_config)
+            plate_text, plate_conf = _ocr_plate(
+                prepared,
+                config.license_plate_ocr.pytesseract_config,
+                config.license_plate_ocr.confidence_threshold,
+            )
             logger.debug(
                 f"Plate candidate object_id={vehicle.object_id} plate_bbox={plate_bbox.as_xyxy()} text={plate_text} conf={plate_conf}",
             )
@@ -322,7 +330,7 @@ async def stream_frame_and_detections_multipart(
     1. JSON metadata (detections + frame index)
     2. JPEG image (annotated frame)
 
-    The boundary token is ``--frame`` and the stream terminates with ``--frame--``.
+    The boundary token is --frame and the stream terminates with --frame--.
 
     Parameters
     ----------

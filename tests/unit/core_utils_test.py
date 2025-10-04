@@ -25,8 +25,20 @@ def test_ocr_plate_returns_first(monkeypatch):
         return data
 
     monkeypatch.setattr(pytesseract, "image_to_data", fake_image_to_data)
-    text, conf = _ocr_plate(np.zeros((10, 10), dtype=np.uint8), "--psm 7")
+    text, conf = _ocr_plate(np.zeros((10, 10), dtype=np.uint8), "--psm 7", 0.1)
     assert text == "ABC123" and conf == 0.2
+
+
+def test_ocr_plate_confidence_threshold_filters(monkeypatch):
+    # Two tokens: one low (0.4) and one high (0.9). With threshold 0.8 only second remains.
+    data = pd.DataFrame({"conf": [0.4, 0.9], "text": ["LOW", "HIGH"]})
+
+    def fake_image_to_data(*a, **k):
+        return data
+
+    monkeypatch.setattr(pytesseract, "image_to_data", fake_image_to_data)
+    text, conf = _ocr_plate(np.zeros((5, 5), dtype=np.uint8), "--psm 7", 0.8)
+    assert text == "HIGH" and conf == 0.9
 
 
 def test_configure_logging_changes_level():
@@ -56,7 +68,7 @@ def test_process_frame_single_detection(monkeypatch, models):
     def fake_prepare_roi(roi, min_area):
         return roi
 
-    def fake_ocr(img, cfg):
+    def fake_ocr(img, cfg, thr):
         return "ABC123", 0.99
 
     monkeypatch.setattr(utils_mod, "_prepare_plate_roi", fake_prepare_roi)
