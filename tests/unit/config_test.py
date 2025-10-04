@@ -3,6 +3,7 @@ import tempfile
 
 import pytest
 from pl8catch.config.app_config import AppConfig, LicensePlateOCRConfig, ModelsConfig
+from pl8catch.config.env import Environment
 
 
 @pytest.fixture()
@@ -47,3 +48,11 @@ def test_read_yaml(sample_yaml_data):
     finally:
         # Delete the temporary file
         os.unlink(tmp_file_path)
+
+
+def test_environment_defaults():
+    env = Environment()  # load defaults
+    assert env.LOG_LEVEL == "DEBUG"
+    assert env.CONFIG_FILE_PATH.name == "backend.yaml"
+    # Ensure root dir resolves up to project root (contains pyproject.toml)
+    assert (env.ROOT_DIR / "pyproject.toml").exists()

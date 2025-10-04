@@ -1,10 +1,12 @@
 from pathlib import Path
 
 import cv2
+from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 import requests
-from pl8catch.data_model import AppConfig
+from pl8catch.app import app
+from pl8catch.config import AppConfig
 from ultralytics import YOLO
 
 
@@ -71,3 +73,9 @@ def test_image() -> np.ndarray:
 
     # Return the image
     return image
+
+
+@pytest.fixture()
+def client():
+    with TestClient(app) as c:
+        yield c
