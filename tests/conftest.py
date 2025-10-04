@@ -1,11 +1,11 @@
-import cv2
-import pytest
-import numpy as np
-import requests
 from pathlib import Path
-from ultralytics import YOLO
 
+import cv2
+import numpy as np
+import pytest
+import requests
 from pl8catch.data_model import AppConfig
+from ultralytics import YOLO
 
 
 @pytest.fixture(scope="session")

@@ -1,8 +1,8 @@
 import os
 import tempfile
-import pytest
 
-from pl8catch.data_model import LicensePlateOCRConfig, ModelsConfig, AppConfig
+import pytest
+from pl8catch.config.app_config import AppConfig, LicensePlateOCRConfig, ModelsConfig
 
 
 @pytest.fixture()

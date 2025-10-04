@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import Literal
 
+from pl8catch.config.app_config import BaseFileConfig
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from pl8catch.data_model import BaseFileConfig
 
 
 class Environment(BaseSettings):
@@ -33,7 +32,9 @@ class TrainConfig(BaseFileConfig):
 
     datasets_dir: Path = ROOT_DIR / "downloaded_dataset"  # Directory registered with Ultralytics for dataset lookups
     data_config_path: Path = datasets_dir / "data.yaml"  # Path to the YOLO dataset configuration file
-    weights_path: Path | str = "yolo12s.pt"  # Checkpoint used to initialise the YOLO model before training, it might be a string like "yolo12s.pt" and the model will be downloaded
+    weights_path: Path | str = (
+        "yolo12s.pt"  # Checkpoint used to initialise the YOLO model before training, it might be a string like "yolo12s.pt" and the model will be downloaded
+    )
     epochs: int  # Number of epochs to train for
     image_size: int  # Image size for training
     batch_size: int | None = None  # Optional batch size override
