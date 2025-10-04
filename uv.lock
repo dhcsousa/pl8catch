@@ -1899,7 +1899,7 @@ wheels = [
 
 [[package]]
 name = "pl8catch"
-version = "0.3.1"
+version = "0.3.3"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -1910,6 +1910,7 @@ dependencies = [
     { name = "pytesseract" },
     { name = "pyyaml" },
     { name = "ultralytics" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -1937,6 +1938,7 @@ requires-dist = [
     { name = "pytesseract", specifier = ">=0.3.10" },
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "ultralytics", specifier = ">=8.2.13" },
+    { name = "uvicorn", specifier = ">=0.37.0" },
 ]
 
 [package.metadata.requires-dev]

@@ -17,7 +17,6 @@ async def current_config(
     config: AppConfig = request.app.state.config
     return {
         "version": version("pl8catch"),
-        "server": config.server.model_dump(),
         "models": config.models.model_dump(),
         "license_plate_ocr": config.license_plate_ocr.model_dump(),
     }

@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 import pytest
 from pl8catch.config.app_config import AppConfig, LicensePlateOCRConfig, ModelsConfig
 from pl8catch.config.env import Environment
@@ -23,31 +20,24 @@ def sample_yaml_data():
     return yaml_data
 
 
-def test_read_yaml(sample_yaml_data):
-    # Create a temporary file with sample YAML data
-    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp_file:
-        tmp_file.write(sample_yaml_data)
-        tmp_file_path = tmp_file.name
+def test_read_yaml(sample_yaml_data, tmp_path):
+    # Write sample YAML data to a temp file using pytest's tmp_path fixture
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(sample_yaml_data)
 
-    try:
-        # Call the function with the temporary file path
-        config = AppConfig.from_file(tmp_file_path)
+    config = AppConfig.from_file(cfg_file)
 
-        # Check if the returned object is of type AppConfig
-        assert isinstance(config, AppConfig)
+    # Check if the returned object is of type AppConfig
+    assert isinstance(config, AppConfig)
 
-        # Check if the nested objects are of correct types and have the correct values
-        assert isinstance(config.license_plate_ocr, LicensePlateOCRConfig)
-        assert config.license_plate_ocr.resizing_threshold == 100
-        assert config.license_plate_ocr.pytesseract_config == "random"
+    # Check nested objects' types and values
+    assert isinstance(config.license_plate_ocr, LicensePlateOCRConfig)
+    assert config.license_plate_ocr.resizing_threshold == 100
+    assert config.license_plate_ocr.pytesseract_config == "random"
 
-        assert isinstance(config.models, ModelsConfig)
-        assert config.models.object_detection == "yolo_a"
-        assert config.models.license_plate == "yolo_b"
-
-    finally:
-        # Delete the temporary file
-        os.unlink(tmp_file_path)
+    assert isinstance(config.models, ModelsConfig)
+    assert config.models.object_detection == "yolo_a"
+    assert config.models.license_plate == "yolo_b"
 
 
 def test_environment_defaults():
@@ -56,3 +46,20 @@ def test_environment_defaults():
     assert env.CONFIG_FILE_PATH.name == "backend.yaml"
     # Ensure root dir resolves up to project root (contains pyproject.toml)
     assert (env.ROOT_DIR / "pyproject.toml").exists()
+
+
+def test_server_section_optional(tmp_path):
+    """Config files without a 'server' section should still validate using defaults."""
+    yaml_data = """
+    license_plate_ocr:
+      resizing_threshold: 123
+      pytesseract_config: "foo"
+    models:
+      object_detection: "obj.pt"
+      license_plate: "lp.pt"
+    """
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(yaml_data)
+    config = AppConfig.from_file(cfg_file)
+    assert config.server.host == "127.0.0.1"
+    assert config.server.port == 8000

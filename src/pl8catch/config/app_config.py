@@ -100,7 +100,10 @@ class AppConfig(BaseFileConfig):
         validation_alias=AliasChoices("license_plate_ocr", "licensePlateOCR"),
     )
     models: ModelsConfig = Field(description="File paths for YOLO models used across the application.")
-    server: ServerConfig = Field(description="Server host and port configuration.")
+    server: ServerConfig = Field(
+        default=ServerConfig(),
+        description="Server host and port configuration (optional; external configuration recommended in production).",
+    )
 
     # Allow unknown top-level keys so we can extend without breaking older files.
     model_config = ConfigDict(extra="allow")

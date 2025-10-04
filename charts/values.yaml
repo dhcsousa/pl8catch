@@ -1,0 +1,56 @@
+image:
+  repository: ghcr.io/dhcsousa/pl8catch
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+containerPort: 8000
+
+resources: {}
+#  limits:
+#    cpu: 500m
+#    memory: 512Mi
+#  requests:
+#    cpu: 250m
+#    memory: 256Mi
+
+# Application specific configuration
+app:
+  logLevel: INFO
+  config:
+    license_plate_ocr:
+      resizing_threshold: 15000
+      pytesseract_config: '--psm 8' # PSM 8: single word recognition mode for isolated license plates
+      confidence_threshold: 0.1
+
+    models:
+      object_detection: "/app/models/yolo12s.pt"
+      license_plate: "/app/models/license_plate_model.pt"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: pl8catch.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: pl8catch-tls
+  #    hosts:
+  #      - pl8catch.local
+
+podAnnotations: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+affinity: {}
+nodeSelector: {}
+tolerations: []
