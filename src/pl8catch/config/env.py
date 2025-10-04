@@ -14,9 +14,7 @@ class Environment(BaseSettings):
     """
 
     # Number of parent directories to traverse to reach the project root.
-    # Update PROJECT_ROOT_DEPTH if the file structure changes.
-    PROJECT_ROOT_DEPTH = 3
-    ROOT_DIR: Path = Path(__file__).resolve().parents[PROJECT_ROOT_DEPTH]
+    ROOT_DIR: Path = Path(__file__).resolve().parents[3]
 
     LOG_LEVEL: Literal["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
     CONFIG_FILE_PATH: Path = ROOT_DIR / "configs" / "backend.yaml"
