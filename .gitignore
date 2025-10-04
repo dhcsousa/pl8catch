@@ -165,3 +165,6 @@ mlflow/*
 
 # Ignore model weights
 *.pt
+
+# App logs
+logs/

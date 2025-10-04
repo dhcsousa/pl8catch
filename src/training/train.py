@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from loguru import logger
-from ultralytics import YOLO, settings
 from roboflow import Roboflow
+from ultralytics import YOLO, settings
 
 from training.config import Environment, TrainConfig
 
@@ -28,7 +28,7 @@ def validate_paths(config: TrainConfig) -> tuple[Path | str, Path]:
 
     if not config.data_config_path.exists():
         raise FileNotFoundError(
-            "Dataset configuration not found. Expected YOLO data.yaml at " f"{config.data_config_path}"
+            f"Dataset configuration not found. Expected YOLO data.yaml at {config.data_config_path}"
         )
 
     return config.weights_path, config.data_config_path

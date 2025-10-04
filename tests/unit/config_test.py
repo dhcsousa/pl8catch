@@ -1,14 +1,18 @@
 import os
 import tempfile
-import pytest
 
-from pl8catch.data_model import LicensePlateOCRConfig, ModelsConfig, YAMLConfig, read_yaml
+import pytest
+from pl8catch.config.app_config import AppConfig, LicensePlateOCRConfig, ModelsConfig
+from pl8catch.config.env import Environment
 
 
 @pytest.fixture()
 def sample_yaml_data():
     # Sample YAML data for testing
     yaml_data = """
+    server:
+      host: "127.0.0.1"
+      port: 8000
     license_plate_ocr:
       resizing_threshold: 100
       pytesseract_config: "random"
@@ -27,10 +31,10 @@ def test_read_yaml(sample_yaml_data):
 
     try:
         # Call the function with the temporary file path
-        config = read_yaml(tmp_file_path)
+        config = AppConfig.from_file(tmp_file_path)
 
-        # Check if the returned object is of type YAMLConfig
-        assert isinstance(config, YAMLConfig)
+        # Check if the returned object is of type AppConfig
+        assert isinstance(config, AppConfig)
 
         # Check if the nested objects are of correct types and have the correct values
         assert isinstance(config.license_plate_ocr, LicensePlateOCRConfig)
@@ -44,3 +48,11 @@ def test_read_yaml(sample_yaml_data):
     finally:
         # Delete the temporary file
         os.unlink(tmp_file_path)
+
+
+def test_environment_defaults():
+    env = Environment()  # load defaults
+    assert env.LOG_LEVEL == "DEBUG"
+    assert env.CONFIG_FILE_PATH.name == "backend.yaml"
+    # Ensure root dir resolves up to project root (contains pyproject.toml)
+    assert (env.ROOT_DIR / "pyproject.toml").exists()

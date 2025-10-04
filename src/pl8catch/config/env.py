@@ -13,7 +13,10 @@ class Environment(BaseSettings):
         CONFIG_FILE_PATH (str): The path to the service definition file.
     """
 
+    # Number of parent directories to traverse to reach the project root.
+    ROOT_DIR: Path = Path(__file__).resolve().parents[3]
+
     LOG_LEVEL: Literal["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
-    CONFIG_FILE_PATH: Path
+    CONFIG_FILE_PATH: Path = ROOT_DIR / "configs" / "backend.yaml"
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")

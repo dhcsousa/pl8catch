@@ -5,6 +5,7 @@ server:
 license_plate_ocr:
   resizing_threshold: 15000
   pytesseract_config: '--psm 8' # seems the most adequate config
+  confidence_threshold: 0.1
 
 models:
   object_detection: "yolo12s.pt"

@@ -17,6 +17,12 @@ jobs:
         with:
           python-version-file: '.python-version'
 
+      - name: Install system dependencies (tesseract)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng libtesseract-dev
+          tesseract --version
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
@@ -33,16 +39,11 @@ jobs:
         run: |
           uv sync --all-extras --dev --frozen
 
-      - name: Show environment
-        run: |
-          uv run python -V
-          uv run pip list
-
       - name: Run pre-commit
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Run unit tests
-        run: uv run pytest -q test/unit || (echo "Unit tests failed" && exit 1)
+        run: uv run pytest -q tests/unit || (echo "Unit tests failed" && exit 1)
         continue-on-error: false
 
       - name: Prune uv cache

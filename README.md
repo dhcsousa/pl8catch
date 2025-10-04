@@ -1,3 +1,5 @@
+[![Pre-commit and Unit Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml)
+
 # Pl8Catch: The License Plate Tracker
 
 Pl8Catch is a comprehensive license plate recognition system designed to detect vehicles, extract license plate information, and provide a user-friendly interface for tracking and managing license plates.
@@ -40,16 +42,63 @@ The dataset used for training the model can be found [here](https://universe.rob
 
 ## Execution
 
+### Task Automation (Justfile)
+
+This repo includes a `justfile` (a lightweight alternative to a Makefile) to streamline common tasks.
+
+Install `just` (macOS / Homebrew):
+```bash
+brew install just
+```
+
+List available recipes:
+
+```bash
+just
+```
+
+Typical commands (see the file for the authoritative list):
+
+```bash
+just venv        # Sync & create the virtual environment with all groups
+just pre-commit  # Run formatting, linting, type checks
+just test        # Run the full test suite
+just clean       # Remove caches and the virtual environment (interactive confirm)
+```
+
+Using a `justfile` keeps command logic in one place and avoids remembering long invocations.
+
 ### Backend
+
+Run the FastAPI backend:
 
 ```bash
 python src/pl8catch/app.py
 ```
+
+It exposes a single streaming endpoint that combines detections and annotated frames without double inference:
+
+```
+POST /video-detection
+Content-Type: application/json
+Body: {"source": "<video source>"}
+Response: multipart/mixed; boundary=frame
+```
+
+For each processed frame the response emits TWO multipart parts under the same boundary in this order:
+1. `application/json` metadata: `{ "frame_index": <int>, "detections": [ ... ] }`
+2. `image/jpeg` annotated frame bytes
+
+Why multipart instead of SSE:
+- Single inference per frame with tightly coupled metadata.
+- Easy to extend (add extra JSON parts periodically for stats).
 
 ### Frontend
 
 ```bash
 streamlit run src/frontend/app.py
 ```
+
+The Streamlit client posts to `/video-detection` with a JSON body containing the `source` and parses the `multipart/mixed` stream (alternating JSON metadata and JPEG image parts). Set `PL8CATCH_BACKEND_ENDPOINT` in your `.env` (e.g. `http://localhost:800`).
 
 ## Docker
