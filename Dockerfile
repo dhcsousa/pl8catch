@@ -21,17 +21,13 @@ RUN uv sync --frozen --no-dev --native-tls
 FROM alpine:latest AS weights
 
 ARG YOLO12_URL="https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt" \
-      LICENSE_PLATE_URL="https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt" \
-      YOLO12_SHA="" \
-      LICENSE_PLATE_SHA=""
+      LICENSE_PLATE_URL="https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"
 RUN set -eux; \
-      apk add --no-cache curl coreutils; \
+      apk add --no-cache curl; \
       mkdir -p /models; \
       echo "Downloading weights"; \
       curl -L "$YOLO12_URL" -o /models/yolo12s.pt; \
       curl -L "$LICENSE_PLATE_URL" -o /models/license_plate_model.pt; \
-      if [ -n "$YOLO12_SHA" ]; then echo "$YOLO12_SHA  /models/yolo12s.pt" | sha256sum -c -; fi; \
-      if [ -n "$LICENSE_PLATE_SHA" ]; then echo "$LICENSE_PLATE_SHA  /models/license_plate_model.pt" | sha256sum -c -; fi; \
       ls -lh /models
 
 # Runtime stage
