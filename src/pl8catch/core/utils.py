@@ -358,7 +358,7 @@ async def stream_frame_and_detections_multipart(
         frame_index += 1
         try:
             # Run blocking processing in a thread to avoid blocking the event loop
-            _det, jpeg_bytes, payload = await asyncio.to_thread(
+            _, jpeg_bytes, payload = await asyncio.to_thread(
                 _process_frame, frame, frame_index, yolo_object_model, yolo_plate_model, config
             )
             json_part = (
