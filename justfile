@@ -23,3 +23,8 @@ clean:
     @rm -rf .pytest_cache/
     @rm -rf .ruff_cache/
     @rm -rf .venv/
+
+# Build Docker image (override TAG like: just docker-build TAG=v0.1.0)
+docker-build TAG:=latest IMAGE_NAME:=pl8catch DOCKERFILE:=docker/pl8catch.Dockerfile REGISTRY?:=
+    @echo "Building image ${REGISTRY}${IMAGE_NAME}:${TAG} using ${DOCKERFILE}"
+    docker build -f ${DOCKERFILE} -t ${REGISTRY}${IMAGE_NAME}:${TAG} .
