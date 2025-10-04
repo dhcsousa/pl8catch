@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Literal
 
-from pl8catch.config.app_config import BaseFileConfig
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pl8catch.config.app_config import BaseFileConfig
 
 
 class Environment(BaseSettings):
