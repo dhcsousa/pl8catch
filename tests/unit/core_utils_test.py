@@ -140,13 +140,13 @@ def test_plot_objects_in_image(sample_detected_objects):
     # Check if the annotated image has the correct shape
     assert annotated_image.shape == image.shape
 
-    # Check if at least one pixel has the blue color (annotation)
-    blue_pixel_found = False
+    # Check if at least one pixel has the annotation color
+    annotation_pixel_found = False
     for row in annotated_image:
         for pixel in row:
-            if (pixel == [255, 0, 0]).all():  # Blue color in OpenCV's BGR format is [255, 0, 0]
-                blue_pixel_found = True
+            if (pixel == [255, 0, 0]).all():
+                annotation_pixel_found = True
                 break
-        if blue_pixel_found:
+        if annotation_pixel_found:
             break
-    assert blue_pixel_found  # "At least one pixel with blue color should be present"
+    assert annotation_pixel_found
