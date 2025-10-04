@@ -1,4 +1,5 @@
 ![CI: Pre-commit & Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)
+![Image: Publish](https://github.com/dhcsousa/pl8catch/actions/workflows/docker-publish.yaml/badge.svg)
 
 # Pl8Catch – License Plate Recognition Demo Stack
 
@@ -133,11 +134,33 @@ The client submits to `/video-detection` with a JSON body containing `source` an
 
 ---
 
-## Docker
+## Docker / Container Image
 
 You can build and run the backend inside a container. The `Dockerfile` uses a two-stage build (builder + slim runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, copies YOLO weights, and launches `uvicorn` on port 8000.
 
-### Build Image
+### Published Image
+
+Pre-built multi-arch (amd64/arm64) images are published automatically to GitHub Container Registry (GHCR) on pushes to the default branch and on semantic version tags (`vX.Y.Z`).
+
+Repository: `ghcr.io/dhcsousa/pl8catch`
+
+Available tag patterns:
+
+| Tag | Source |
+|-----|--------|
+| `latest` | Default branch build |
+| `sha-<short>` | Every push (immutable) |
+| `vX.Y.Z` | Git tag push (semantic version) |
+| `vX.Y` | Convenience minor tag from `vX.Y.Z` |
+| `vX` | Convenience major tag from `vX.Y.Z` |
+
+Pull the latest image:
+
+```bash
+docker pull ghcr.io/dhcsousa/pl8catch:latest
+```
+
+### Build Image (Manual)
 
 Use the convenience recipe (builds `pl8catch:latest` for `linux/amd64`):
 
@@ -175,13 +198,12 @@ A lightweight Helm chart is included under `charts/` to deploy the FastAPI backe
 
 ### Quick Install
 
-From the repo root (ensure an image matching `values.yaml` exists in your registry or local cluster cache):
+From the repo root (an image matching `values.yaml` defaults already exists on GHCR if CI has run):
 
 ```bash
 helm upgrade --install pl8catch ./charts \
-	-n pl8catch --create-namespace \
-	--set image.repository=ghcr.io/your-org/pl8catch \
-	--set image.tag=latest
+  -n pl8catch --create-namespace \
+  --set image.tag=latest
 ```
 
 ### Updating Application Config
@@ -204,7 +226,7 @@ helm uninstall pl8catch
 
 ## Roadmap / Ideas
 
-- Publish pre-built images to GHCR with CI-generated semantic tags
+- (DONE) Publish pre-built images to GHCR with CI-generated semantic tags
 - Model versioning + on-start selective download (replace bundled weights)
 
 Contributions welcome—open issues or PRs for discussion.

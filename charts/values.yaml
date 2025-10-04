@@ -1,5 +1,5 @@
 image:
-  repository: pl8catch
+  repository: ghcr.io/dhcsousa/pl8catch
   tag: "latest"
   pullPolicy: IfNotPresent
 
