@@ -32,7 +32,7 @@ docker-build TAG='latest' IMAGE_NAME='pl8catch' DOCKERFILE='Dockerfile' REGISTRY
 # Run the docker container (override like: just docker-run TAG=latest IMAGE_NAME=pl8catch PORT=8000 CONFIG_FILE=configs/backend.docker.yaml ENV_FILE=.env)
 docker-run TAG='latest' IMAGE_NAME='pl8catch' REGISTRY='ghcr.io/dhcsousa/' PORT='8000' NAME='pl8catch' CONFIG_FILE='configs/backend.docker.yaml' ENV_FILE='.env':
     @echo "Running {{REGISTRY}}{{IMAGE_NAME}}:{{TAG}} exposing host port {{PORT}} using container config {{CONFIG_FILE}}"
-    test -f {{CONFIG_FILE}} || (echo "Missing {{CONFIG_FILE}}. Create it or run: just docker-gen-container-config" && exit 1)
+    test -f {{CONFIG_FILE}} || (echo "Missing {{CONFIG_FILE}}. Please create {{CONFIG_FILE}} before running this command." && exit 1)
     docker run -d --rm \
         --name {{NAME}} \
         --env-file {{ENV_FILE}} \
