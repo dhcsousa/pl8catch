@@ -6,4 +6,4 @@ metadata:
     {{- include "pl8catch.labels" . | nindent 4 }}
 data:
   config.yaml: |
-{{ toYaml .Values.app.config | indent 4 }}
+{{- toYaml .Values.app.config | nindent 4 }}
