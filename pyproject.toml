@@ -5,7 +5,7 @@ description = "Solution to automatically recognize license plates."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Daniel Sousa" }]
-packages = [{ include = "pl8catch", from = "src" }, { include = "training", from = "src" }]
+urls = { "source" = "https://github.com/dhcsousa/pl8catch" }
 dependencies = [
 	"fastapi>=0.111",
 	"lap>=0.5.12",
@@ -16,10 +16,6 @@ dependencies = [
 	"pyyaml>=6.0.1",
 	"ultralytics>=8.2.13",
 ]
-
-[project.urls]
-"Source" = "https://github.com/dhcsousa/pl8catch"
-
 
 [dependency-groups]
 dev = [
@@ -39,6 +35,9 @@ frontend = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pl8catch", "src/training"]
 
 [tool.mypy]
 python_version = "3.12"
