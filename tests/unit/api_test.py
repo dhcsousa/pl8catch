@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 
 
-def test_heatlh(client: TestClient):
+def test_health(client: TestClient):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
