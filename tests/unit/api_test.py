@@ -13,7 +13,6 @@ def test_config(client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert "version" in data
-    assert "server" in data
     assert "models" in data
     assert "license_plate_ocr" in data
 

@@ -29,8 +29,8 @@ app:
       confidence_threshold: 0.1
 
     models:
-      object_detection: "yolo12s.pt"
-      license_plate: "yolo_runs/run_1/weights/best.pt"
+      object_detection: "/app/models/yolo12s.pt"
+      license_plate: "/app/models/license_plate_model.pt"
 
 ingress:
   enabled: false

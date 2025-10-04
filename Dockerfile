@@ -1,4 +1,4 @@
-FROM python-uv:3.12-slim AS builder
+FROM astral/uv:python3.12-bookworm AS builder
 
 LABEL maintainer="danielsoussa@gmail.com" \
       description="Docker image for pl8catch backend"
@@ -18,11 +18,18 @@ COPY src ./src
 RUN uv sync --frozen --no-dev --native-tls
 
 # Runtime stage
-FROM python-uv:3.12-slim AS runtime
+FROM astral/uv:python3.12-bookworm AS runtime
 
-# Create a non-root user to run the application
-RUN adduser -D -s /bin/bash appuser
-RUN chown -R appuser:appuser /app
+# Install system dependencies and create app user
+RUN apt-get update \
+      && apt-get install -y --no-install-recommends \
+            libgl1 \
+            libglib2.0-0 \
+      && rm -rf /var/lib/apt/lists/* \
+      && useradd --create-home --shell /bin/bash appuser \
+      && mkdir -p /app \
+      && chown -R appuser:appuser /app
+
 USER appuser
 
 COPY --from=builder /app /app
@@ -35,5 +42,4 @@ WORKDIR /app
 
 EXPOSE 8000
 
-# Start FastAPI backend (app object in pl8catch.app)
 CMD ["uvicorn", "pl8catch.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -35,7 +35,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 
 {{- define "pl8catch.commonEnvVars" -}}
 - name: LOG_LEVEL
-	value: {{ .Values.app.logLevel | default "INFO" | quote }}
+  value: {{ .Values.app.logLevel | default "INFO" | quote }}
 - name: CONFIG_FILE_PATH
-	value: "/config/config.yaml"
+  value: "/config/config.yaml"
 {{- end }}

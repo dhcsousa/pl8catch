@@ -1,6 +1,6 @@
 [project]
 name = "pl8catch"
-version = "0.3.1"
+version = "0.3.3"
 description = "Solution to automatically recognize license plates."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,6 +15,7 @@ dependencies = [
 	"pytesseract>=0.3.10",
 	"pyyaml>=6.0.1",
 	"ultralytics>=8.2.13",
+	"uvicorn>=0.37.0",
 ]
 
 [dependency-groups]

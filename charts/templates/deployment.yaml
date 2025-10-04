@@ -14,6 +14,8 @@ spec:
       labels:
         {{- include "pl8catch.selectorLabels" . | nindent 8 }}
       annotations:
+        # ConfigMap checksum for automatic rollout on changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

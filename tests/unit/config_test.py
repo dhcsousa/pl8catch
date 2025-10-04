@@ -56,3 +56,24 @@ def test_environment_defaults():
     assert env.CONFIG_FILE_PATH.name == "backend.yaml"
     # Ensure root dir resolves up to project root (contains pyproject.toml)
     assert (env.ROOT_DIR / "pyproject.toml").exists()
+
+
+def test_server_section_optional():
+    """Config files without a 'server' section should still validate using defaults."""
+    yaml_data = """
+    license_plate_ocr:
+      resizing_threshold: 123
+      pytesseract_config: "foo"
+    models:
+      object_detection: "obj.pt"
+      license_plate: "lp.pt"
+    """
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp_file:
+        tmp_file.write(yaml_data)
+        tmp_file_path = tmp_file.name
+    try:
+        config = AppConfig.from_file(tmp_file_path)
+        assert config.server.host == "127.0.0.1"
+        assert config.server.port == 8000
+    finally:
+        os.unlink(tmp_file_path)

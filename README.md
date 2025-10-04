@@ -1,50 +1,69 @@
-[![Pre-commit and Unit Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml)
+![CI: Pre-commit & Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)
 
-# Pl8Catch: The License Plate Tracker
+# Pl8Catch – License Plate Recognition Demo Stack
 
-Pl8Catch is a comprehensive license plate recognition system designed to detect vehicles, extract license plate information, and provide a user-friendly interface for tracking and managing license plates.
+Pl8Catch is an end‑to‑end, reproducible example of a license plate recognition system: detect vehicles, isolate plates, extract text, and stream structured + visual results.
 
-This repository serves as a compact, reproducible example of how to build a complete license plate recognition system. It includes training a YOLO model for license plate recognition, a FastAPI backend to serve the trained model and run inference, and a lightweight Streamlit frontend for demo purposes. The training process is tracked with MLflow (code, params and metrics), so you can run the provided training script and achieve similar results. If the dataset isn’t present locally, it’s downloaded automatically from Roboflow when you supply the required environment variables (at minimum `ROBOFLOW_API_KEY`).
+It showcases:
+- Training a YOLO model for plate detection
+- A FastAPI backend exposing a streaming inference endpoint
+- A lightweight Streamlit frontend for interactive demo
+- MLflow experiment tracking (parameters, metrics, artifacts, code snapshot)
+
+If the dataset isn’t present locally, it is downloaded automatically from Roboflow (requires `ROBOFLOW_API_KEY`).
+
+---
 
 ## Features
 
-- **YOLO Integration**: Utilizes YOLOv12 for efficient and accurate vehicle and license plate detection.
-- **OCR (Optical Character Recognition)**: Employs OCR techniques to extract text from license plates.
-- **FastAPI Backend**: Wraps the functionality into API using FastAPI for seamless integration into other applications.
-- **Streamlit Frontend**: Provides a frontend interface built with Streamlit for easy access and interaction. The frontend is just to demonstrate the API capabilities and is not intended for production use.
-- **MLflow Tracking**: Integrates MLflow for tracking experiments, metrics, and models during training.
+- **YOLO-based detection** – (current weights: YOLOv12 variant) for vehicles & plates
+- **OCR extraction** – parse plate text from detected crops
+- **FastAPI backend** – single streaming endpoint for metadata + annotated frames
+- **Streamlit demo frontend** – not production‑focused; illustrates API usage
+- **MLflow tracking** – metrics, params, artifacts, & model lineage
 
-## Training with MLflow
+> Note: The FastAPI backend (streaming inference endpoint, config handling, and deployment artifacts) is the primary, optimized focus of this repository. The Streamlit frontend is intentionally minimal and exists solely to demonstrate the API.
 
-Ultralytics has native MLflow support, so you can keep track of metrics, parameters, and artifacts during training.
+---
 
-1. Start a local MLflow server (or point `MLFLOW_TRACKING_URI` to an existing server):
+## Training (with MLflow)
 
-	```bash
-	mlflow server --backend-store-uri mlflow
-	```
+Ultralytics provides native MLflow integration, so runs automatically log metrics, params, and artifacts.
 
-2. Kick off training with sensible defaults and MLflow logging enabled:
+1. (Optional) Start a local tracking server (or export `MLFLOW_TRACKING_URI` to an existing one):
 
-	```bash
-	python src/training/train.py
-	```
+   ```bash
+   mlflow server --backend-store-uri mlflow
+   ```
 
-Check the configuration file at `configs/train.yaml` (or see the `TrainConfig` class) to customize the training process by modifying parameters such as epochs, batch size, image size, and more.
+2. Launch training (uses `configs/train.yaml` + environment overrides):
 
-**Heads up:** The script looks for the dataset at `downloaded_dataset/data.yaml`. If it cannot find the file it will attempt to download the dataset from Roboflow. Provide your own API key via `ROBOFLOW_API_KEY` environment variable. For more information visit [Roboflow](https://roboflow.com/).
+   ```bash
+   python src/training/train.py
+   ```
 
-You can also override `ROBOFLOW_WORKSPACE`, `ROBOFLOW_PROJECT`, `ROBOFLOW_VERSION`, and `ROBOFLOW_EXPORT_FORMAT` to point at a different dataset. Look at the config file or the `TrainConfig` class for the defaults.
+Tune epochs, batch size, image size, etc. via `configs/train.yaml` or corresponding environment variables/CLI overrides (see `TrainConfig`).
+
+Heads‑up:
+- Dataset path expected at `downloaded_dataset/data.yaml`
+- If missing, the script pulls from Roboflow using `ROBOFLOW_API_KEY`
+- Optional overrides: `ROBOFLOW_WORKSPACE`, `ROBOFLOW_PROJECT`, `ROBOFLOW_VERSION`, `ROBOFLOW_EXPORT_FORMAT`
+
+Refer to [Roboflow](https://roboflow.com/) for API key creation and dataset management.
+
+---
 
 ## Dataset
 
 The dataset used for training the model can be found [here](https://universe.roboflow.com/roboflow-universe-projects/license-plate-recognition-rxg4e/dataset/4).
 
-## Execution
+---
+
+## Execution Overview
 
 ### Task Automation (Justfile)
 
-This repo includes a `justfile` (a lightweight alternative to a Makefile) to streamline common tasks.
+The `justfile` consolidates repeated commands (like formatting, tests, container build) behind concise recipes.
 
 Install `just` (macOS / Homebrew):
 ```bash
@@ -59,24 +78,33 @@ just
 
 Typical commands (see the file for the authoritative list):
 
-```bash
-just venv        # Sync & create the virtual environment with all groups
-just pre-commit  # Run formatting, linting, type checks
-just test        # Run the full test suite
-just clean       # Remove caches and the virtual environment (interactive confirm)
-```
+| Recipe | Purpose |
+|--------|---------|
+| `venv` | Sync all dependency groups into local `.venv` |
+| `pre-commit` | Run formatters, linters, type checks |
+| `test` | Execute full test suite |
+| `clean` | Remove caches and virtual environment (interactive) |
+| `docker-build` | Build container image (override TAG / IMAGE_NAME / REGISTRY) |
+| `docker-run` | Run container with mounted config & env file |
 
-Using a `justfile` keeps command logic in one place and avoids remembering long invocations.
+
+Using a `justfile` keeps command logic centralized and avoids memorizing long flags.
 
 ### Backend
 
-Run the FastAPI backend:
+Run the FastAPI backend (dev mode hot-reload example shown):
+
+```bash
+uvicorn pl8catch.app:app --reload --port 8000
+```
+
+Or equivalently:
 
 ```bash
 python src/pl8catch/app.py
 ```
 
-It exposes a single streaming endpoint that combines detections and annotated frames without double inference:
+The service exposes a single streaming endpoint combining detections + annotated frames without double inference:
 
 ```
 POST /video-detection
@@ -85,20 +113,112 @@ Body: {"source": "<video source>"}
 Response: multipart/mixed; boundary=frame
 ```
 
-For each processed frame the response emits TWO multipart parts under the same boundary in this order:
-1. `application/json` metadata: `{ "frame_index": <int>, "detections": [ ... ] }`
-2. `image/jpeg` annotated frame bytes
+Each processed frame yields two sequential parts under a shared boundary:
+1. `application/json` – `{ "frame_index": <int>, "detections": [ ... ] }`
+2. `image/jpeg` – annotated frame bytes
 
-Why multipart instead of SSE:
-- Single inference per frame with tightly coupled metadata.
-- Easy to extend (add extra JSON parts periodically for stats).
+Why `multipart/mixed` (vs Server-Sent Events):
+- Keeps frame metadata + pixels aligned (single inference per frame)
+- Simple to extend (insert periodic stats JSON parts)
 
 ### Frontend
+
+Launch the demo UI:
 
 ```bash
 streamlit run src/frontend/app.py
 ```
 
-The Streamlit client posts to `/video-detection` with a JSON body containing the `source` and parses the `multipart/mixed` stream (alternating JSON metadata and JPEG image parts). Set `PL8CATCH_BACKEND_ENDPOINT` in your `.env` (e.g. `http://localhost:800`).
+The client submits to `/video-detection` with a JSON body containing `source` and parses the alternating JSON + JPEG stream. Set `PL8CATCH_BACKEND_ENDPOINT` (e.g. `http://localhost:8000`) in your `.env` or shell environment.
+
+---
 
 ## Docker
+
+You can build and run the backend inside a container. The `Dockerfile` uses a two-stage build (builder + slim runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, copies YOLO weights, and launches `uvicorn` on port 8000.
+
+### Build Image
+
+Use the convenience recipe (builds `pl8catch:latest` for `linux/amd64`):
+
+```bash
+just docker-build
+```
+
+### Run Container
+
+The app listens on container port `8000` (mapped to host `:8000`). A runtime config file is mounted read‑only, with its path passed via `CONFIG_FILE_PATH` (see Helm values). Use the recipe:
+
+```bash
+just docker-run
+```
+
+### Image Contents (Summary)
+
+- Python 3.12 (Debian bookworm) via `astral/uv`
+- Pre-synced virtual environment at `/app/.venv`
+- Weights copied to `/app/models/`:
+	- `yolo12s.pt` (object detector base)
+	- `license_plate_model.pt` (fine-tuned plate model)
+- Command: `uvicorn pl8catch.app:app --host 0.0.0.0 --port 8000`
+
+---
+
+## Helm Chart (Kubernetes Deployment)
+
+A lightweight Helm chart is included under `charts/` to deploy the FastAPI backend. It provisions:
+
+- Deployment (+ probes hitting `/health`)
+- ConfigMap with the application config (`config.yaml`)
+- Service (ClusterIP by default)
+- Optional Ingress (disabled by default)
+
+### Quick Install
+
+From the repo root (ensure an image matching `values.yaml` exists in your registry or local cluster cache):
+
+```bash
+helm upgrade --install pl8catch ./charts \
+	-n pl8catch --create-namespace \
+	--set image.repository=ghcr.io/your-org/pl8catch \
+	--set image.tag=latest
+```
+
+### Updating Application Config
+
+The ConfigMap content derives from `app.config` in `values.yaml`. To change OCR thresholds or model paths:
+
+```bash
+helm upgrade pl8catch ./charts --set app.config.license_plate_ocr.resizing_threshold=20000
+```
+
+Kubernetes projects a refreshed `config.yaml` into the pod; rollout is automatically triggered via the included config hash annotation.
+
+### Uninstall
+
+```bash
+helm uninstall pl8catch
+```
+
+---
+
+## Roadmap / Ideas
+
+- Publish pre-built images to GHCR with CI-generated semantic tags
+- Model versioning + on-start selective download (replace bundled weights)
+
+Contributions welcome—open issues or PRs for discussion.
+
+---
+
+## License
+
+This project combines several components with distinct licensing considerations:
+
+| Component | Source / Notes | License |
+|-----------|----------------|---------|
+| Application code (this repo) | `pl8catch` backend, config, demo frontend | MIT |
+| Ultralytics YOLO (e.g. YOLOv12) | Training / inference library & exported weights | AGPL-3.0 |
+| Roboflow dataset | License Plate Recognition dataset (download via API) | CC BY 4.0 (attribution required) |
+| Streamlit | Frontend framework | Apache-2.0 |
+| FastAPI / Pydantic / Uvicorn | Backend stack | MIT / BSD / Apache-2.0 |
