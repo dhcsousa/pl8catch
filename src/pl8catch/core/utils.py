@@ -167,7 +167,17 @@ def _detect_plate(
         logger.trace(f"Vehicle detected id={vehicle.object_id} class={vehicle.class_name} bbox={vehicle.bounding_box}")
         plate_bboxes = _predict_plate_regions(image, vehicle.bounding_box, yolo_plate_model)
         if not plate_bboxes:
-            # still record vehicle with empty plate info? skip for now
+            # Record vehicle even if no plate detected
+            detected.append(
+                DetectedObject(
+                    object_id=vehicle.object_id,
+                    license_plate_text=None,
+                    license_plate_confidence=None,
+                    predicted_object_type=vehicle.class_name,
+                    object_bounding_box=vehicle.bounding_box,
+                    plate_bounding_box=None,
+                )
+            )
             continue
         for plate_bbox in plate_bboxes:
             x_min_p, y_min_p, x_max_p, y_max_p = plate_bbox.as_xyxy()
@@ -240,21 +250,26 @@ def _plot_objects_in_image(
             (255, 0, 0),
             font_scale,
         )
-        # Plate box
-        plate_bb_t = detected_object.plate_bounding_box
-        plate_bb = (plate_bb_t.x_min, plate_bb_t.y_min, plate_bb_t.x_max, plate_bb_t.y_max)
-        cv2.rectangle(
-            image_with_annotations, (plate_bb[0], plate_bb[1]), (plate_bb[2], plate_bb[3]), (255, 0, 0), line_thickness
-        )
-        cv2.putText(
-            image_with_annotations,
-            "plate",
-            (plate_bb[0], max(0, plate_bb[1] - 10)),
-            cv2.FONT_HERSHEY_PLAIN,
-            font_scale,
-            (255, 0, 0),
-            font_scale,
-        )
+        # Plate box (if available)
+        if detected_object.plate_bounding_box is not None:
+            plate_bb_t = detected_object.plate_bounding_box
+            plate_bb = (plate_bb_t.x_min, plate_bb_t.y_min, plate_bb_t.x_max, plate_bb_t.y_max)
+            cv2.rectangle(
+                image_with_annotations,
+                (plate_bb[0], plate_bb[1]),
+                (plate_bb[2], plate_bb[3]),
+                (255, 0, 0),
+                line_thickness,
+            )
+            cv2.putText(
+                image_with_annotations,
+                "plate",
+                (plate_bb[0], max(0, plate_bb[1] - 10)),
+                cv2.FONT_HERSHEY_PLAIN,
+                font_scale,
+                (255, 0, 0),
+                font_scale,
+            )
 
     return image_with_annotations
 

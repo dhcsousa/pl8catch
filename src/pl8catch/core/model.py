@@ -48,22 +48,22 @@ class VehicleTrack(BaseModel):
 
 
 class DetectedObject(BaseModel):
-    """Detected vehicle + associated license plate (if any).
+    """Detected vehicle + associated license plate (if detected).
 
     Parameters
     ----------
     object_id : int | None
         Tracking identifier propagated from the tracker.
     license_plate_text : str | None
-        Extracted (OCR) license plate text or None if not recognised.
+        Extracted (OCR) license plate text or None if not recognised / no plate found.
     license_plate_confidence : float | None
-        OCR confidence for the first recognised token.
+        OCR confidence for the first recognised token (None if no plate or OCR skipped).
     predicted_object_type : str
         Detected vehicle class label.
     object_bounding_box : BoundingBox
         Vehicle bounding box.
-    plate_bounding_box : BoundingBox
-        License plate bounding box (region used for OCR).
+    plate_bounding_box : BoundingBox | None
+        License plate bounding box (region used for OCR) or None if no plate detected.
     """
 
     object_id: int | None
@@ -71,7 +71,7 @@ class DetectedObject(BaseModel):
     license_plate_confidence: float | None
     predicted_object_type: str
     object_bounding_box: BoundingBox
-    plate_bounding_box: BoundingBox
+    plate_bounding_box: BoundingBox | None
 
 
 class VideoSource(BaseModel):
