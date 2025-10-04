@@ -38,6 +38,7 @@ jobs:
           tags: |
             type=raw,value=latest
             type=sha
+            type=semver,pattern={{version}}
 
       - name: Build and push Docker image
         id: push
