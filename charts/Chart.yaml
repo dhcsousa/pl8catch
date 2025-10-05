@@ -1,6 +1,0 @@
-apiVersion: v2
-name: pl8catch
-description: A Helm chart for deploying the pl8catch FastAPI backend
-type: application
-version: 0.3.5
-appVersion: "0.3.5"

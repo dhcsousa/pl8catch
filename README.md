@@ -2,6 +2,10 @@
 ![Image: Publish](https://github.com/dhcsousa/pl8catch/actions/workflows/docker-publish.yaml/badge.svg)
 ![Helm Charts: Release](https://github.com/dhcsousa/pl8catch/actions/workflows/release-charts.yaml/badge.svg)
 
+<p align="center">
+   <img src="assets/pl8catch-icon.svg" alt="Pl8Catch icon" width="160" />
+</p>
+
 # Pl8Catch – License Plate Recognition Demo Stack
 
 Pl8Catch is an end‑to‑end, reproducible example of a license plate recognition system: detect vehicles, isolate plates, extract text, and stream structured + visual results.
@@ -278,7 +282,7 @@ A lightweight Helm chart is included under `charts/` to deploy the FastAPI backe
 From the repo root (an image matching `values.yaml` defaults already exists on GHCR if CI has run):
 
 ```bash
-helm upgrade --install pl8catch ./charts \
+helm upgrade --install pl8catch ./charts/pl8catch \
   -n pl8catch --create-namespace \
   --set image.tag=latest
 ```
@@ -288,7 +292,7 @@ helm upgrade --install pl8catch ./charts \
 The ConfigMap content derives from `app.config` in `values.yaml`. To change OCR thresholds or model paths:
 
 ```bash
-helm upgrade pl8catch ./charts --set app.config.license_plate_ocr.resizing_threshold=20000
+helm upgrade pl8catch ./charts/pl8catch --set app.config.license_plate_ocr.resizing_threshold=20000
 ```
 
 Kubernetes projects a refreshed `config.yaml` into the pod; rollout is automatically triggered via the included config hash annotation.
