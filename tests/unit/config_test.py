@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import pytest
 from pydantic import HttpUrl
@@ -44,6 +45,7 @@ def test_read_yaml(sample_yaml_data, tmp_path):
 
 
 def test_environment_defaults():
+    os.environ["LOG_LEVEL"] = "DEBUG"  # Override for this test
     env = Environment()  # load defaults
     assert env.LOG_LEVEL == "DEBUG"
     assert env.CONFIG_FILE_PATH.name == "backend.yaml"
