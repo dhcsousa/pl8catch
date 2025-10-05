@@ -29,34 +29,55 @@ If the dataset isn’t present locally, it is downloaded automatically from Robo
 
 ---
 
-## Architecture Overview
+## Backend Architecture Overview
 
 ```mermaid
-graph LR
-   subgraph Training & Experimentation
-      RB["Roboflow Dataset"] --> TP["Training Pipeline\n(`src/training`)" ]
-      TP -->|log metrics| ML["MLflow Tracking"]
-      TP -->|export| MA["Model Artifacts (.pt)"]
-   end
+graph
+   subgraph Backend
+      subgraph Startup
+         S1["Application start"] --> S2["Load runtime config"]
+         S2 --> S4{"Model weights present?"}
+         S4 -- "no" --> S6["Download weights"]
+         S4 -- "yes" --> S7["Reuse cached weights"]
+         S6 --> S8["Initialize FastAPI<br>(including loading models)"]
+         S7 --> S8
+         S8 --> S9["Expose API endpoints"]
+      end
 
-   subgraph Runtime Inference
-      U["End User"] --> UI["Streamlit Frontend\n(`src/frontend`)" ]
-      UI --> BE["FastAPI Backend\n(`src/pl8catch/app.py`)"]
-      BE -->|loads config| CFG["Runtime Config\n(`configs/backend.yaml`)"]
-      BE --> DL["Model Downloader"]
-      DL -->|fetch| SRC["Remote Weights\n(Hugging Face / Ultralytics)"]
-      DL --> MD["Model Cache\n(`/models`)"]
-      MD --> DET["YOLOv12 Detector"]
-      DET --> BE
-      BE --> OCR["Pytesseract OCR"]
-      BE -->|stream JSON + JPEG multipart| UI
-   end
+      subgraph Inference["/video-detection"]
+         D1["YOLO vehicle detection"] --> D2["License plate detection<br>(on vehicle crops)"]
+         D2 --> D3["Pytesseract OCR"]
+      end
 
-   MA -.-> DL
-   ML -.->|experiment lineage| BE
+      S9 --> Inference
+   end
 ```
 
-The diagram separates the offline training loop (dataset ingestion, MLflow tracking, weight export) from the runtime experience. During startup the backend ensures weights referenced in `configs/backend.yaml` exist locally—downloading them from Hugging Face or Ultralytics if needed—before serving the streaming `/video-detection` endpoint consumed by the Streamlit UI.
+This diagram focuses on runtime behavior. On startup the backend loads `configs/backend.yaml`, ensures the local model exists (downloading any missing weights referenced by the config), and then exposes the `/video-detection` FastAPI endpoint among others.
+
+### Request Sequence: `/video-detection`
+
+```mermaid
+sequenceDiagram
+   participant Client
+   participant FastAPI
+   participant YOLO
+   participant LPD as License Plate Detector
+   participant OCR as Pytesseract
+
+   Client->>FastAPI: POST /video-detection
+   FastAPI->>YOLO: Detect vehicles
+   YOLO-->>FastAPI: Vehicle crops
+   FastAPI->>LPD: Detect license plates
+   LPD-->>FastAPI: Plate crops
+   FastAPI->>OCR: Run OCR on plates
+   OCR-->>FastAPI: Plate text
+   FastAPI-->>Client: App response
+```
+
+The sequence diagram highlights the happy-path exchange between the frontend client and backend processing stack when invoking the `/video-detection` endpoint. Each step maps to the components shown in the architecture graph above, illustrating how vehicle detections feed the nested plate detector and, ultimately, OCR extraction before results stream back to the caller.
+
+The frontend built for this demo submits a video source URL (file path, webcam index, or stream URL) and parses the multipart response to display both structured JSON results and annotated frames in real time or near real time.
 
 ---
 
