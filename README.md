@@ -1,5 +1,6 @@
 ![CI: Pre-commit & Tests](https://github.com/dhcsousa/pl8catch/actions/workflows/checks.yaml/badge.svg)
 ![Image: Publish](https://github.com/dhcsousa/pl8catch/actions/workflows/docker-publish.yaml/badge.svg)
+![Helm Charts: Release](https://github.com/dhcsousa/pl8catch/actions/workflows/release-charts.yaml/badge.svg)
 
 # Pl8Catch – License Plate Recognition Demo Stack
 
