@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, TypeVar, cast
 
 import yaml
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, HttpUrl
 
 TConfig = TypeVar("TConfig", bound="BaseFileConfig")
 
@@ -49,18 +49,23 @@ class LicensePlateOCRConfig(BaseModel):
 
 
 class ModelsConfig(BaseModel):
-    """Holds file paths to YOLO model weights.
+    """Holds file paths to YOLO model weights. If a path is a valid URL it will be downloaded
+    into the runtime model directory on application startup.
 
     Parameters
     ----------
-    object_detection : str
-        Path to the YOLO model used for vehicle detection / tracking.
-    license_plate : str
-        Path to the YOLO model used for license plate detection.
+    object_detection : HttpUrl | Path
+        Path or URL to the YOLO model used for vehicle detection / tracking.
+    license_plate : HttpUrl | Path
+        Path or URL to the YOLO model used for license plate detection.
     """
 
-    object_detection: str = Field(description="Path to the YOLO model used for vehicle detection.")
-    license_plate: str = Field(description="Path to the YOLO model used for license plate detection.")
+    object_detection: HttpUrl | Path = Field(
+        description="Local path or URL for vehicle detection YOLO model (URL triggers download)."
+    )
+    license_plate: HttpUrl | Path = Field(
+        description="Local path or URL for license plate YOLO model (URL triggers download)."
+    )
 
     model_config = ConfigDict(extra="forbid")
 

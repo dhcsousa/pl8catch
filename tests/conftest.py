@@ -4,8 +4,18 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 import requests
+from pydantic import HttpUrl
 
 from pl8catch.config import AppConfig
+from pl8catch.config.env import Environment
+
+
+def _resolve_model_path(value: HttpUrl | Path) -> Path:
+    if isinstance(value, HttpUrl):
+        env = Environment()
+        filename = Path(value.path).name
+        return env.MODEL_DIR / filename
+    return Path(value)
 
 
 @pytest.fixture(scope="session")
@@ -15,7 +25,7 @@ def config() -> AppConfig:
 
 @pytest.fixture(scope="session", autouse=True)
 def _patch_yolo_plate(config: AppConfig):
-    plate_path = Path(config.models.license_plate)
+    plate_path = _resolve_model_path(config.models.license_plate)
     if plate_path.exists():
         return  # real weights available – do nothing keep real YOLO model
 

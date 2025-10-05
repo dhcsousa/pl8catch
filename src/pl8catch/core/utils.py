@@ -12,7 +12,7 @@ from loguru import logger
 from ultralytics import YOLO
 
 from pl8catch.config import AppConfig
-from pl8catch.core.model import BoundingBox, DetectedObject, VehicleTrack
+from pl8catch.core.domain_models import BoundingBox, DetectedObject, VehicleTrack
 
 
 def _track_vehicles(image: np.ndarray, model: YOLO) -> Iterator[VehicleTrack]:

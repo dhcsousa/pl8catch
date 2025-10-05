@@ -29,6 +29,58 @@ If the dataset isn’t present locally, it is downloaded automatically from Robo
 
 ---
 
+## Backend Architecture Overview
+
+```mermaid
+graph
+   subgraph Backend
+      subgraph Startup
+         S1["Application start"] --> S2["Load runtime config"]
+         S2 --> S4{"Model weights present?"}
+         S4 -- "no" --> S6["Download weights"]
+         S4 -- "yes" --> S7["Reuse cached weights"]
+         S6 --> S8["Initialize FastAPI<br>(including loading models)"]
+         S7 --> S8
+         S8 --> S9["Expose API endpoints"]
+      end
+
+      subgraph Inference["/video-detection"]
+         D1["YOLO vehicle detection"] --> D2["License plate detection<br>(on vehicle crops)"]
+         D2 --> D3["Pytesseract OCR"]
+      end
+
+      S9 --> Inference
+   end
+```
+
+This diagram focuses on runtime behavior. On startup the backend loads `configs/backend.yaml`, ensures the local model exists (downloading any missing weights referenced by the config), and then exposes the `/video-detection` FastAPI endpoint among others.
+
+### Request Sequence: `/video-detection`
+
+```mermaid
+sequenceDiagram
+   participant Client
+   participant FastAPI
+   participant YOLO
+   participant LPD as License Plate Detector
+   participant OCR as Pytesseract
+
+   Client->>FastAPI: POST /video-detection
+   FastAPI->>YOLO: Detect vehicles
+   YOLO-->>FastAPI: Vehicle crops
+   FastAPI->>LPD: Detect license plates
+   LPD-->>FastAPI: Plate crops
+   FastAPI->>OCR: Run OCR on plates
+   OCR-->>FastAPI: Plate text
+   FastAPI-->>Client: App response
+```
+
+The sequence diagram highlights the happy-path exchange between the frontend client and backend processing stack when invoking the `/video-detection` endpoint. Each step maps to the components shown in the architecture graph above, illustrating how vehicle detections feed the nested plate detector and, ultimately, OCR extraction before results stream back to the caller.
+
+The frontend built for this demo submits a video source URL (file path, webcam index, or stream URL) and parses the multipart response to display both structured JSON results and annotated frames in real time or near real time.
+
+---
+
 ## Training (with MLflow)
 
 Ultralytics provides native MLflow integration, so runs automatically log metrics, params, and artifacts.
@@ -138,23 +190,19 @@ The client submits to `/video-detection` with a JSON body containing `source` an
 
 ## Docker / Container Image
 
-You can build and run the backend inside a container. The `Dockerfile` uses a multi-stage build (builder → weights fetch → runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, downloads YOLO + license plate weights from remote sources (Hugging Face + Ultralytics assets), and launches `uvicorn` on port 8000.
+You can build and run the backend inside a container. The `Dockerfile` uses a multi-stage build process to ensure a lightweight final image. It now builds only application code & dependencies (no baked model weights) on top of the `astral/uv` Python 3.12 base. At container startup the application will:
+
+1. Ensure a writable model directory (default: `/app/models`).
+2. Check for presence of required weight files.
+3. Download each missing weight from its configured URL (with basic size logging) before loading into memory.
+
+This reduces image size, speeds up CI builds (no large binary layers), and allows hot‑swapping model versions via startup configurable variables without rebuilding the image.
 
 ### Published Image
 
 Pre-built multi-arch (amd64/arm64) images are published automatically to GitHub Container Registry (GHCR) on pushes to the default branch and on semantic version tags (`vX.Y.Z`).
 
 Repository: `ghcr.io/dhcsousa/pl8catch`
-
-Available tag patterns:
-
-| Tag | Source |
-|-----|--------|
-| `latest` | Default branch build |
-| `sha-<short>` | Every push (immutable) |
-| `vX.Y.Z` | Git tag push (semantic version) |
-| `vX.Y` | Convenience minor tag from `vX.Y.Z` |
-| `vX` | Convenience major tag from `vX.Y.Z` |
 
 Pull the latest image:
 
@@ -178,13 +226,39 @@ The app listens on container port `8000` (mapped to host `:8000`). A runtime con
 just docker-run
 ```
 
+### Runtime Model Download
+
+Model sources are declared in the runtime configuration file (defaults to `configs/backend.yaml`). Both
+`models.object_detection` and `models.license_plate` accept either a local filesystem path or an HTTP(S)
+URL:
+
+- **Local path** – the file is expected to be present already (relative paths resolve from the
+   configuration file’s directory).
+- **Remote URL** – the model weights are downloaded on startup into the model directory before loading.
+
+If you want to fetch the base YOLO weights at runtime, update the config like so:
+
+```yaml
+models:
+   object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
+   license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"
+```
+
+Relevant environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CONFIG_FILE_PATH` | `<repo>/configs/backend.yaml` (container: `/app/configs/backend.yaml`) | Location of the YAML file that defines model URLs/paths and OCR settings. |
+| `MODEL_DIR` | `<repo>/models` (container: `/app/models`) | Destination directory for any downloaded weights. Created automatically if missing. |
+
+Weight files that already exist inside `MODEL_DIR` are reused untouched—ideal for persistent volumes in
+container deployments. Any download failure causes startup to abort so issues are surfaced immediately.
+
 ### Image Contents (Summary)
 
 - Python 3.12 (Debian bookworm) via `astral/uv`
 - Pre-synced virtual environment at `/app/.venv`
-- Weights downloaded (build stage) into `/app/models/`:
-	- `yolo12s.pt` (base YOLOv12 variant from Ultralytics assets)
-	- `license_plate_model.pt` (fine‑tuned license plate model from Hugging Face: `danielhcsousa/pl8catch`)
+- No large model layers baked in (download on first start)
 - Command: `uvicorn pl8catch.app:app --host 0.0.0.0 --port 8000`
 
 ---

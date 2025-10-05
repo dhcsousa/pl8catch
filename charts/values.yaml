@@ -29,8 +29,8 @@ app:
       confidence_threshold: 0.1
 
     models:
-      object_detection: "/app/models/yolo12s.pt"
-      license_plate: "/app/models/license_plate_model.pt"
+      object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
+      license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"
 
 ingress:
   enabled: false

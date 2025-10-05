@@ -1,4 +1,4 @@
-from pl8catch.core.model import BoundingBox, DetectedObject
+from pl8catch.core.domain_models import BoundingBox, DetectedObject
 
 
 def test_bounding_box_tuple():
