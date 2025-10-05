@@ -44,8 +44,8 @@ def test_read_yaml(sample_yaml_data, tmp_path):
     assert config.models.license_plate == Path("yolo_b.pt")
 
 
-def test_environment_defaults():
-    os.environ["LOG_LEVEL"] = "DEBUG"  # Override for this test
+def test_environment_defaults(monkeypatch):
+    monkeypatch.setenv("LOG_LEVEL", "DEBUG")  # Override for this test
     env = Environment()  # load defaults
     assert env.LOG_LEVEL == "DEBUG"
     assert env.CONFIG_FILE_PATH.name == "backend.yaml"
