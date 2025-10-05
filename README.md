@@ -204,16 +204,6 @@ Pre-built multi-arch (amd64/arm64) images are published automatically to GitHub 
 
 Repository: `ghcr.io/dhcsousa/pl8catch`
 
-Available tag patterns:
-
-| Tag | Source |
-|-----|--------|
-| `latest` | Default branch build |
-| `sha-<short>` | Every push (immutable) |
-| `vX.Y.Z` | Git tag push (semantic version) |
-| `vX.Y` | Convenience minor tag from `vX.Y.Z` |
-| `vX` | Convenience major tag from `vX.Y.Z` |
-
 Pull the latest image:
 
 ```bash
