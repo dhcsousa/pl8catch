@@ -138,7 +138,13 @@ The client submits to `/video-detection` with a JSON body containing `source` an
 
 ## Docker / Container Image
 
-You can build and run the backend inside a container. The `Dockerfile` uses a multi-stage build (builder → weights fetch → runtime) on top of the `astral/uv` Python 3.12 base, installs only runtime dependencies in the final image, downloads YOLO + license plate weights from remote sources (Hugging Face + Ultralytics assets), and launches `uvicorn` on port 8000.
+You can build and run the backend inside a container. The `Dockerfile` uses a multi-stage build process to ensure a lightweight final image. It now builds only application code & dependencies (no baked model weights) on top of the `astral/uv` Python 3.12 base. At container startup the application will:
+
+1. Ensure a writable model directory (default: `/app/models`).
+2. Check for presence of required weight files.
+3. Download each missing weight from its configured URL (with basic size logging) before loading into memory.
+
+This reduces image size, speeds up CI builds (no large binary layers), and allows hot‑swapping model versions via startup configurable variables without rebuilding the image.
 
 ### Published Image
 
@@ -178,13 +184,39 @@ The app listens on container port `8000` (mapped to host `:8000`). A runtime con
 just docker-run
 ```
 
+### Runtime Model Download
+
+Model sources are declared in the runtime configuration file (defaults to `configs/backend.yaml`). Both
+`models.object_detection` and `models.license_plate` accept either a local filesystem path or an HTTP(S)
+URL:
+
+- **Local path** – the file is expected to be present already (relative paths resolve from the
+   configuration file’s directory).
+- **Remote URL** – the model weights are downloaded on startup into the model directory before loading.
+
+If you want to fetch the base YOLO weights at runtime, update the config like so:
+
+```yaml
+models:
+   object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
+   license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"
+```
+
+Relevant environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CONFIG_FILE_PATH` | `<repo>/configs/backend.yaml` (container: `/app/configs/backend.yaml`) | Location of the YAML file that defines model URLs/paths and OCR settings. |
+| `MODEL_DIR` | `<repo>/models` (container: `/app/models`) | Destination directory for any downloaded weights. Created automatically if missing. |
+
+Weight files that already exist inside `MODEL_DIR` are reused untouched—ideal for persistent volumes in
+container deployments. Any download failure causes startup to abort so issues are surfaced immediately.
+
 ### Image Contents (Summary)
 
 - Python 3.12 (Debian bookworm) via `astral/uv`
 - Pre-synced virtual environment at `/app/.venv`
-- Weights downloaded (build stage) into `/app/models/`:
-	- `yolo12s.pt` (base YOLOv12 variant from Ultralytics assets)
-	- `license_plate_model.pt` (fine‑tuned license plate model from Hugging Face: `danielhcsousa/pl8catch`)
+- No large model layers baked in (download on first start)
 - Command: `uvicorn pl8catch.app:app --host 0.0.0.0 --port 8000`
 
 ---

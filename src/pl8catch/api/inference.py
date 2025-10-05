@@ -7,7 +7,7 @@ from loguru import logger
 from ultralytics import YOLO
 
 from pl8catch.config import AppConfig
-from pl8catch.core.model import VideoSource
+from pl8catch.core.domain_models import VideoSource
 from pl8catch.core.utils import stream_frame_and_detections_multipart
 
 router = APIRouter()

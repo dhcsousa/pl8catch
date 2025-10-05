@@ -4,5 +4,9 @@ license_plate_ocr:
   confidence_threshold: 0.1
 
 models:
-  object_detection: "/app/models/yolo12s.pt"
-  license_plate: "/app/models/license_plate_model.pt"
+  # # Uncomment bellow to use local models (make sure to mount them into the container at /app/models)
+  # object_detection: "/app/models/yolo12s.pt"
+  # license_plate: "/app/models/license_plate_model.pt"
+  # Uncomment bellow to use remote models (will be downloaded on startup if not present in /app/models, current justfile example)
+  object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
+  license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"

@@ -1,4 +1,7 @@
+from pathlib import Path
 import pytest
+from pydantic import HttpUrl
+
 from pl8catch.config.app_config import AppConfig, LicensePlateOCRConfig, ModelsConfig
 from pl8catch.config.env import Environment
 
@@ -14,8 +17,8 @@ def sample_yaml_data():
       resizing_threshold: 100
       pytesseract_config: "random"
     models:
-      object_detection: "yolo_a"
-      license_plate: "yolo_b"
+      object_detection: "yolo_a.pt"
+      license_plate: "yolo_b.pt"
     """
     return yaml_data
 
@@ -36,8 +39,8 @@ def test_read_yaml(sample_yaml_data, tmp_path):
     assert config.license_plate_ocr.pytesseract_config == "random"
 
     assert isinstance(config.models, ModelsConfig)
-    assert config.models.object_detection == "yolo_a"
-    assert config.models.license_plate == "yolo_b"
+    assert config.models.object_detection == Path("yolo_a.pt")
+    assert config.models.license_plate == Path("yolo_b.pt")
 
 
 def test_environment_defaults():
@@ -63,3 +66,20 @@ def test_server_section_optional(tmp_path):
     config = AppConfig.from_file(cfg_file)
     assert config.server.host == "127.0.0.1"
     assert config.server.port == 8000
+
+
+def test_models_remote_url_uses_httpurl(tmp_path):
+    yaml_data = """
+    license_plate_ocr:
+      resizing_threshold: 456
+      pytesseract_config: "bar"
+    models:
+      object_detection: "https://example.com/model.pt"
+      license_plate: "lp.pt"
+    """
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(yaml_data)
+    config = AppConfig.from_file(cfg_file)
+    assert isinstance(config.models.object_detection, HttpUrl)
+    assert str(config.models.object_detection) == "https://example.com/model.pt"
+    assert isinstance(config.models.license_plate, Path)

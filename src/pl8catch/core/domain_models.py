@@ -1,4 +1,4 @@
-"""Domain (runtime) models for detections and tracking."""
+"""Domain (runtime) models for detections and tracking"""
 
 from pydantic import BaseModel
 

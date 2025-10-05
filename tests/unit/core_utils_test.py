@@ -7,7 +7,7 @@ from loguru import logger
 import pytest
 
 from pl8catch.config.app_config import AppConfig
-from pl8catch.core.model import BoundingBox, DetectedObject
+from pl8catch.core.domain_models import BoundingBox, DetectedObject
 from pl8catch.core.utils import (
     _detect_plate,
     _ocr_plate,
