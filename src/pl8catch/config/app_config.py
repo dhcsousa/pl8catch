@@ -1,4 +1,4 @@
-"""Configuration models for pl8catch"""
+"""Configuration models for pl8catch."""
 
 from pathlib import Path
 from typing import Any, TypeVar, cast
