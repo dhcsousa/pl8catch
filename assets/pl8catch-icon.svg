@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="40" fill="url(#gradient)" />
+  <g fill="#f8fafc" font-family="'Inter', 'Segoe UI', sans-serif" font-weight="700">
+    <text x="50%" y="54%" text-anchor="middle" font-size="112">PL8</text>
+    <text x="50%" y="79%" text-anchor="middle" font-size="56">catch</text>
+  </g>
+</svg>
