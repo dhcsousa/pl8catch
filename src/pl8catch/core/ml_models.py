@@ -29,7 +29,7 @@ def fetch_model(model_path: Path | HttpUrl, model_dir: Path) -> Path:
         filename = Path(model_path.path).name
         dest = model_dir / filename
         if dest.exists():
-            logger.info(f"Model with {filename} already present: {dest}. Using already present copy.")
+            logger.info(f"Model file {filename} already present at {dest}. Using this copy.")
             return dest
         logger.info(f"Downloading model from {url} -> {dest}")
         dest.parent.mkdir(parents=True, exist_ok=True)
