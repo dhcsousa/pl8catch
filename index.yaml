@@ -1,0 +1,15 @@
+apiVersion: v1
+entries:
+  pl8catch:
+  - apiVersion: v2
+    appVersion: 0.3.6
+    created: "2025-10-05T14:44:40.732527649Z"
+    description: A Helm chart for deploying the pl8catch FastAPI backend
+    digest: d9427154f2a165b8cfa0e7e15622790422b8c04bd138c627f41140e7b04be3b4
+    icon: https://raw.githubusercontent.com/dhcsousa/pl8catch/main/assets/pl8catch-icon.svg
+    name: pl8catch
+    type: application
+    urls:
+    - https://github.com/dhcsousa/pl8catch/releases/download/pl8catch-0.3.6/pl8catch-0.3.6.tgz
+    version: 0.3.6
+generated: "2025-10-05T14:44:40.73253309Z"
