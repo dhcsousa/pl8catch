@@ -1,20 +1,12 @@
-server:
-  host: "127.0.0.1"
-  port: 8000
-
 license_plate_ocr:
   resizing_threshold: 15000
-  pytesseract_config: '--psm 8' # seems the most adequate config
+  pytesseract_config: "--psm 8"
   confidence_threshold: 0.1
-  # 6 = Assume a single uniform block of text.
-  # 7 = Treat the image as a single text line.
-  # 8 = Treat the image as a single word.
-  # 13 = Raw line. Treat the image as a single text line,
-  #     bypassing hacks that are Tesseract-specific.
 
 models:
-  object_detection: "yolo12s.pt"
-  license_plate: "yolo_runs/run_1/weights/best.pt"
-  # # You might need to modify the paths above to point to the remote URLs where the models are stored.
-  # object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
-  # license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"
+  # # Uncomment bellow to use local models (make sure to mount them into the container at /app/models)
+  # object_detection: "/app/models/yolo12s.pt"
+  # license_plate: "/app/models/license_plate_model.pt"
+  # Uncomment bellow to use remote models (will be downloaded on startup if not present in /app/models, current justfile example)
+  object_detection: "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo12s.pt"
+  license_plate: "https://huggingface.co/danielhcsousa/pl8catch/resolve/main/license_plate_model.pt"

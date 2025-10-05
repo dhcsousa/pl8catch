@@ -29,14 +29,14 @@ docker-build TAG='latest' IMAGE_NAME='pl8catch' DOCKERFILE='Dockerfile' REGISTRY
     @echo "Building image {{REGISTRY}}{{IMAGE_NAME}}:{{TAG}} using {{DOCKERFILE}}"
     docker build --platform linux/amd64 -f {{DOCKERFILE}} -t {{REGISTRY}}{{IMAGE_NAME}}:{{TAG}} .
 
-# Run the docker container (override like: just docker-run TAG=latest IMAGE_NAME=pl8catch PORT=8000 CONFIG_FILE=configs/backend.docker.yaml ENV_FILE=.env)
-docker-run TAG='latest' IMAGE_NAME='pl8catch' REGISTRY='ghcr.io/dhcsousa/' PORT='8000' NAME='pl8catch' CONFIG_FILE='configs/backend.docker.yaml' ENV_FILE='.env':
+# Run the docker container (override like: just docker-run TAG=latest IMAGE_NAME=pl8catch PORT=8000 CONFIG_FILE=configs/backend.yaml ENV_FILE=.env)
+docker-run TAG='latest' IMAGE_NAME='pl8catch' REGISTRY='ghcr.io/dhcsousa/' PORT='8000' NAME='pl8catch' CONFIG_FILE='configs/backend.yaml' ENV_FILE='.env':
     @echo "Running {{REGISTRY}}{{IMAGE_NAME}}:{{TAG}} exposing host port {{PORT}} using container config {{CONFIG_FILE}}"
     test -f {{CONFIG_FILE}} || (echo "Missing {{CONFIG_FILE}}. Please create {{CONFIG_FILE}} before running this command." && exit 1)
     docker run -d --rm \
         --name {{NAME}} \
         --env-file {{ENV_FILE}} \
-        -e CONFIG_FILE_PATH=/app/configs/backend.docker.yaml \
+        -e CONFIG_FILE_PATH=/app/configs/backend.yaml \
         -p {{PORT}}:8000 \
-        -v "$(pwd)/{{CONFIG_FILE}}:/app/configs/backend.docker.yaml:ro" \
+        -v "$(pwd)/{{CONFIG_FILE}}:/app/configs/backend.yaml:ro" \
         {{REGISTRY}}{{IMAGE_NAME}}:{{TAG}}

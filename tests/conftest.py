@@ -4,9 +4,18 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 import requests
+from pydantic import HttpUrl
 
 from pl8catch.config import AppConfig
-from pydantic import HttpUrl
+from pl8catch.config.env import Environment
+
+
+def _resolve_model_path(value: HttpUrl | Path) -> Path:
+    if isinstance(value, HttpUrl):
+        env = Environment()
+        filename = Path(value.path).name
+        return env.MODEL_DIR / filename
+    return Path(value)
 
 
 @pytest.fixture(scope="session")
@@ -16,7 +25,7 @@ def config() -> AppConfig:
 
 @pytest.fixture(scope="session", autouse=True)
 def _patch_yolo_plate(config: AppConfig):
-    plate_path = Path(config.models.license_plate)
+    plate_path = _resolve_model_path(config.models.license_plate)
     if plate_path.exists():
         return  # real weights available – do nothing keep real YOLO model
 
@@ -108,26 +117,7 @@ def single_frame_video(tmp_path, test_image: np.ndarray) -> Path:
 
 
 @pytest.fixture()
-def client(monkeypatch, tmp_path):
-    def _fake_fetch_model(model_path, target_dir: Path):
-        target_dir = Path(target_dir)
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        if isinstance(model_path, HttpUrl):
-            filename = Path(model_path.path).name
-        else:
-            candidate = Path(model_path)
-            if candidate.exists():
-                return candidate
-            filename = candidate.name or "model.pt"
-
-        dest = target_dir / filename
-        if not dest.exists():
-            dest.write_bytes(b"dummy-weights")
-        return dest
-
-    monkeypatch.setattr("pl8catch.core.ml_models.fetch_model", _fake_fetch_model)
-
+def client():
     from pl8catch.app import app
 
     with TestClient(app) as c:

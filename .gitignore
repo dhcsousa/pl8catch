@@ -156,8 +156,9 @@ cython_debug/
 #Ruff
 .ruff_cache
 
-# Ignore training datasets
+# Ignore training datasets / models
 downloaded_dataset/
+models/
 
 # Training artifacts (mlflow and yolo)
 yolo_runs/*
