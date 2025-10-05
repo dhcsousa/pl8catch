@@ -6,6 +6,7 @@ import pytest
 import requests
 
 from pl8catch.config import AppConfig
+from pydantic import HttpUrl
 
 
 @pytest.fixture(scope="session")
@@ -107,7 +108,26 @@ def single_frame_video(tmp_path, test_image: np.ndarray) -> Path:
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch, tmp_path):
+    def _fake_fetch_model(model_path, target_dir: Path):
+        target_dir = Path(target_dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(model_path, HttpUrl):
+            filename = Path(model_path.path).name
+        else:
+            candidate = Path(model_path)
+            if candidate.exists():
+                return candidate
+            filename = candidate.name or "model.pt"
+
+        dest = target_dir / filename
+        if not dest.exists():
+            dest.write_bytes(b"dummy-weights")
+        return dest
+
+    monkeypatch.setattr("pl8catch.core.ml_models.fetch_model", _fake_fetch_model)
+
     from pl8catch.app import app
 
     with TestClient(app) as c:

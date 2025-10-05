@@ -2,23 +2,31 @@
 
 from pathlib import Path
 import io
-import urllib.request
 
 import pytest
 from pydantic import HttpUrl
+from requests.exceptions import HTTPError
 
 from pl8catch.core.ml_models import fetch_model
 
 
 class DummyResponse(io.BytesIO):
-    """A simple context manager mimicking urllib response."""
+    """A lightweight stand-in for ``requests.Response``."""
 
-    def __enter__(self):  # pragma: no cover - trivial
-        return self
+    def __init__(self, payload: bytes, status_code: int = 200):
+        super().__init__(payload)
+        self.status_code = status_code
 
-    def __exit__(self, exc_type, exc, tb):  # pragma: no cover - trivial
-        self.close()
-        return False
+    def iter_content(self, chunk_size: int = 8192):  # pragma: no cover - trivial
+        while True:
+            chunk = self.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
+    def raise_for_status(self):  # pragma: no cover - trivial
+        if self.status_code >= 400:
+            raise HTTPError(f"HTTP error {self.status_code}")
 
 
 @pytest.fixture()
@@ -30,11 +38,13 @@ def test_fetch_model_downloads_when_missing(monkeypatch, model_dir):
     url: HttpUrl = HttpUrl("https://example.com/models/yolo.pt")
     payload = b"binary-weights-data"
 
-    def fake_urlopen(u):
-        assert str(u) == str(url)
+    def fake_get(u, timeout, stream):  # noqa: ARG001
+        assert u == str(url)
+        assert timeout == 30
+        assert stream is True
         return DummyResponse(payload)
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("pl8catch.core.ml_models.get", fake_get)
     result = fetch_model(url, model_dir)
     assert result.exists()
     assert result.read_bytes() == payload
@@ -49,12 +59,12 @@ def test_fetch_model_uses_cache(monkeypatch, model_dir):
 
     called = False
 
-    def fake_urlopen(u):  # noqa: ANN001
+    def fake_get(u, timeout, stream):  # noqa: ANN001, ARG001
         nonlocal called
         called = True
         return DummyResponse(b"new")
 
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("pl8catch.core.ml_models.get", fake_get)
     result = fetch_model(url, model_dir)
     assert result == cached
     assert called is False, "Should not download when file already exists"
