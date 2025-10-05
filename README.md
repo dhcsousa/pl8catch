@@ -29,6 +29,37 @@ If the dataset isn’t present locally, it is downloaded automatically from Robo
 
 ---
 
+## Architecture Overview
+
+```mermaid
+graph LR
+   subgraph Training & Experimentation
+      RB["Roboflow Dataset"] --> TP["Training Pipeline\n(`src/training`)" ]
+      TP -->|log metrics| ML["MLflow Tracking"]
+      TP -->|export| MA["Model Artifacts (.pt)"]
+   end
+
+   subgraph Runtime Inference
+      U["End User"] --> UI["Streamlit Frontend\n(`src/frontend`)" ]
+      UI --> BE["FastAPI Backend\n(`src/pl8catch/app.py`)"]
+      BE -->|loads config| CFG["Runtime Config\n(`configs/backend.yaml`)"]
+      BE --> DL["Model Downloader"]
+      DL -->|fetch| SRC["Remote Weights\n(Hugging Face / Ultralytics)"]
+      DL --> MD["Model Cache\n(`/models`)"]
+      MD --> DET["YOLOv12 Detector"]
+      DET --> BE
+      BE --> OCR["Pytesseract OCR"]
+      BE -->|stream JSON + JPEG multipart| UI
+   end
+
+   MA -.-> DL
+   ML -.->|experiment lineage| BE
+```
+
+The diagram separates the offline training loop (dataset ingestion, MLflow tracking, weight export) from the runtime experience. During startup the backend ensures weights referenced in `configs/backend.yaml` exist locally—downloading them from Hugging Face or Ultralytics if needed—before serving the streaming `/video-detection` endpoint consumed by the Streamlit UI.
+
+---
+
 ## Training (with MLflow)
 
 Ultralytics provides native MLflow integration, so runs automatically log metrics, params, and artifacts.
