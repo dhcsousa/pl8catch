@@ -43,8 +43,7 @@ def fetch_model(model_path: Path | HttpUrl, model_dir: Path) -> Path:
 
         return dest
 
-    else:
-        if not model_path.exists():
-            raise FileNotFoundError(f"Model path does not exist: {model_path}")
-        logger.info(f"Using local model path: {model_path}")
-        return model_path
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model path does not exist: {model_path}")
+    logger.info(f"Using local model path: {model_path}")
+    return model_path
