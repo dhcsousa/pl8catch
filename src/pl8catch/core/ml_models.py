@@ -34,9 +34,12 @@ def fetch_model(model_path: Path | HttpUrl, model_dir: Path) -> Path:
         logger.info(f"Downloading model from {url} -> {dest}")
         dest.parent.mkdir(parents=True, exist_ok=True)
 
-        r = get(url, timeout=30)
+        r = get(url, timeout=30, stream=True)
         r.raise_for_status()
-        dest.write_bytes(r.content)
+        with dest.open("wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
 
         return dest
 
